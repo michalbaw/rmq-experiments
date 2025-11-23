@@ -429,6 +429,12 @@ int main(int argc, char *argv[]) {
             RMQExperiment<rmq_succinct_sct<>> rmq(algo,&A,qv);
         } 
         
+
+        {
+            string algo = "RMQ_FAST";
+            RMQExperiment<RMQ_Fast> rmq(algo, &A, qv);
+        }
+        
         
         long int *B = new long int[N];
         for(size_t i = 0; i < N; ++i) {

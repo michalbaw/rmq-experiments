@@ -197,16 +197,16 @@ internal_timings_plot <- function(timings, title="") {
 }
 
 #==========Experiment===========#
-experiment_dir="/home/theuer/Dokumente/rmq-experiments/results/"
+experiment_dir="./results/"
 date="2017-12-06"
 seq_type="increasing"
 max_length="8"
 delta="0"
 tmp <- cbind(date,"rmq_experiment",seq_type,max_length,delta)
-experiment <- str_c(tmp,collapse='_');
-experiment <- paste(experiment_dir,experiment,sep="")
+# experiment <- str_c(tmp,collapse='_');
+# experiment <- paste(experiment_dir,experiment,sep="")
 
-query <- read.csv2(paste(experiment,"/query_result.csv",sep=""),sep=",",header=TRUE)
+query <- read.csv2("results/query_result.csv",sep=",",header=TRUE)
 query$Time <- as.numeric(as.character(query$Time))
 query$Range <- as.numeric(as.character(query$Range))
 query$N <- as.numeric(as.character(query$N))

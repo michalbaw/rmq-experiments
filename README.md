@@ -16,7 +16,7 @@ Make sure you have created the folders results/ and benchmark/ before you start 
 
 Starting the experiment:
 ```
-python scripts/rmq_experiments.py --length=8 --seq_type=random --delta=0
+python3 scripts/rmq_experiments.py --min_length=5 --max_length=8 --seq_type=random --delta=0
 ```
 * ``--length=N`` specifies the size of the sequence, which is 10<sup>N</sup>
 * ``--seq_type=type`` with ``type = {random,increasing,decreasing}`` specifies the input type (see paper)
