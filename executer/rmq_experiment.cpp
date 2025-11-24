@@ -7,6 +7,7 @@
 #include <iostream>
 #include <chrono>
 #include <climits>
+#include <random>
  
 #include "../rmq/includes/RMQRMM64.h"
 #include "../succinct/cartesian_tree.hpp"
@@ -191,6 +192,73 @@ private:
     construction_stats c_stats;
     cache_miss_stats cache_stats;
 };
+
+void executeRandomAccess(long int *A, size_t N, vector<vector<query>>& qry) {
+    string algo = "RMQ_RANDOM_ACCESS";
+    vector<query_stats> q_stats(qry.size(),query_stats(algo));
+    construction_stats c_stats(algo);
+    cache_miss_stats cache_stats(N,algo);
+    
+    s = time();
+    // RMQRMM64 rmq(A,N);
+    e = time();
+    
+    c_stats.addConstructionResult(N,milliseconds(),
+                                  8.0*(static_cast<double>(rmq.getSize())/static_cast<double>(N)));
+    c_stats.printConstructionStats();
+    
+
+    mt19937 rng(213);
+    std::uniform_int_distribution<int> distrib(0, N);
+    
+    for(int i = 0; i < qry.size(); ++i) {
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            // volatile auto res = rmq.queryRMQ(i1,i2);
+            int k = distrib(rng);
+            volatile auto res = A[k];
+        }
+    }
+
+    for(int i = 0; i < qry.size(); ++i) {
+        q_stats[i].N = N;
+        
+        if(count_cache_misses) {
+            bool success = hw_event.start(PERF_COUNT_HW_CACHE_MISSES); 
+            if(!success) {
+                perror("perf_event_open");
+                exit(-1);   
+            }
+        }
+        
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            if(i1 > ULONG_MAX || i2 > ULONG_MAX) continue;
+            
+            int k = distrib(rng);
+            s = time();
+            volatile auto res = A[k];
+            e = time();
+          
+	       q_stats[i].addQueryResult(qry[i][j],microseconds());
+        }
+        
+        if(count_cache_misses) {
+            hw_event.stop();
+            size_t range = qry[i][0].second - qry[i][0].first + 1;
+            double cache_miss = static_cast<double>(hw_event.getCacheMisses())/qry[i].size();
+            double cache_ref = static_cast<double>(hw_event.getCacheReferences())/qry[i].size();
+            double miss_ratio = cache_miss/cache_ref;
+            cache_stats.addCacheMissResult(range,miss_ratio,cache_miss,cache_ref);
+        }
+        
+        q_stats[i].printQueryStats();
+    }
+    
+    if(count_cache_misses) {
+        cache_stats.printCacheMissStats();
+    }
+}
 
 
 void executeRMQFerrada(long int *A, size_t N, vector<vector<query>>& qry) {
@@ -440,7 +508,11 @@ int main(int argc, char *argv[]) {
         
         {
             executeRMQFerrada(B,N,qv);
-        } 
+        }
+
+        {
+            executeRandomAccess(B,N,qv);
+        }
         
         if(N < std::numeric_limits<int>::max()) {
             std::vector<long long> C(N);
