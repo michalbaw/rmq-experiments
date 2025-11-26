@@ -193,30 +193,84 @@ private:
     cache_miss_stats cache_stats;
 };
 
-void executeRandomAccess(long int *A, size_t N, vector<vector<query>>& qry) {
-    string algo = "RMQ_RANDOM_ACCESS";
+// RMQ ANTOINE
+// using namespace std;
+#define fwd(i, a, n) for (int i = (a); i < (n); i++)
+#define rep(i, n) fwd(i, 0, n)
+#define sz(X) int(ssize(X))
+#define eb emplace_back
+template<class T>
+struct RMQ {
+	vector<vector<T> > s;
+	RMQ(vector<T> a = {}) : s(1, a) {
+		if (!sz(a)) return;
+		rep(d, __lg(sz(a))) {
+			s.eb(sz(a) - (1 << d) * 2 + 1);
+			rep(j, sz(s[d + 1]))
+				s[d + 1][j] = min(s[d][j], s[d][j + (1 << d)]);
+		}
+	}
+	T get(int l, int r) {
+		int d = __lg(r - l + 1);
+		return min(s[d][l], s[d][r - (1 << d) + 1]);
+	}
+};
+
+template<class T, class BT = uint32_t>
+struct RMQF {
+	static constexpr int B = sizeof(BT); // not larger!
+	RMQ<T> s;
+	vector<BT> m;
+	vector<T> a, c;
+	RMQF(vector<T> A = {}) : m(sz(A)), a(A), c(sz(A)) {
+		vector<T> b(sz(a) / B + 1);
+		BT mi = 0;
+		rep(i, sz(a)) {
+			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
+			mi <<= 1;
+			while (mi && a[i] < a[i - __builtin_ctz(mi)])
+				mi ^= (1u << __builtin_ctz(mi));
+			m[i] = mi ^= 1; c[i] = a[i - __lg(m[i])];
+		}
+		s = RMQ(b);
+	}
+	T get(int l, int r) {
+		if (r - l + 1 < B)
+			return a[r - __lg(m[r] & ((1u << (r - l + 1)) - 1))];
+		T k = min(c[r], c[l + B - 1]);
+		l = (l + B - 1) / B, r = r / B - 1;
+		if (l <= r) k = min(k, s.get(l, r));
+		return k; } 
+    
+    ll getSize() {
+        return (sizeof(T) * (s.size() + a.size() + c.size()) + sizeof(BT) * m.size());
+    }
+
+
+};
+
+void executeRMQAntoine(long int *A, size_t N, vector<vector<query>>& qry) {
+    string algo = "RMQ_ANTOINE";
     vector<query_stats> q_stats(qry.size(),query_stats(algo));
     construction_stats c_stats(algo);
     cache_miss_stats cache_stats(N,algo);
     
+    vector<long int> AA(N);
+    for (int i = 0; i < N; ++i){ AA[i] = A[i]; }
+
     s = time();
     // RMQRMM64 rmq(A,N);
+    RMQF rmq(AA);
     e = time();
     
     c_stats.addConstructionResult(N,milliseconds(),
                                   8.0*(static_cast<double>(rmq.getSize())/static_cast<double>(N)));
     c_stats.printConstructionStats();
     
-
-    mt19937 rng(213);
-    std::uniform_int_distribution<int> distrib(0, N);
-    
     for(int i = 0; i < qry.size(); ++i) {
         for(int j = 0; j < qry[i].size(); ++j) {
             ll i1 = qry[i][j].first, i2 = qry[i][j].second;
-            // volatile auto res = rmq.queryRMQ(i1,i2);
-            int k = distrib(rng);
-            volatile auto res = A[k];
+            volatile auto res = rmq.get(i1,i2);
         }
     }
 
@@ -235,9 +289,76 @@ void executeRandomAccess(long int *A, size_t N, vector<vector<query>>& qry) {
             ll i1 = qry[i][j].first, i2 = qry[i][j].second;
             if(i1 > ULONG_MAX || i2 > ULONG_MAX) continue;
             
-            int k = distrib(rng);
             s = time();
-            volatile auto res = A[k];
+            volatile auto res = rmq.get(i1,i2);
+            e = time();
+          
+	       q_stats[i].addQueryResult(qry[i][j],microseconds());
+        }
+        
+        if(count_cache_misses) {
+            hw_event.stop();
+            size_t range = qry[i][0].second - qry[i][0].first + 1;
+            double cache_miss = static_cast<double>(hw_event.getCacheMisses())/qry[i].size();
+            double cache_ref = static_cast<double>(hw_event.getCacheReferences())/qry[i].size();
+            double miss_ratio = cache_miss/cache_ref;
+            cache_stats.addCacheMissResult(range,miss_ratio,cache_miss,cache_ref);
+        }
+        
+        q_stats[i].printQueryStats();
+    }
+
+    if(count_cache_misses) {
+        cache_stats.printCacheMissStats();
+    }
+
+}
+
+void executeRandomAccess(long int *A, size_t N, vector<vector<query>>& qry) {
+    string algo = "RMQ_RANDOM_ACCESS";
+    vector<query_stats> q_stats(qry.size(),query_stats(algo));
+    construction_stats c_stats(algo);
+    cache_miss_stats cache_stats(N,algo);
+    
+    s = time();
+    // RMQRMM64 rmq(A,N);
+    e = time();
+    
+    c_stats.addConstructionResult(N,milliseconds(),
+                                  8.0*(static_cast<double>(1)));
+    c_stats.printConstructionStats();
+    
+
+    // mt19937 rng(213);
+    // std::uniform_int_distribution<int> distrib(0, N);
+    
+    for(int i = 0; i < qry.size(); ++i) {
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            // volatile auto res = rmq.queryRMQ(i1,i2);
+            // int k = distrib(rng);
+            volatile auto res = A[i1];
+        }
+    }
+
+    for(int i = 0; i < qry.size(); ++i) {
+        q_stats[i].N = N;
+        
+        if(count_cache_misses) {
+            bool success = hw_event.start(PERF_COUNT_HW_CACHE_MISSES); 
+            if(!success) {
+                perror("perf_event_open");
+                exit(-1);   
+            }
+        }
+        
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            if(i1 > ULONG_MAX || i2 > ULONG_MAX) continue;
+            
+            // int k = distrib(rng);
+            s = time();
+            volatile auto res = A[i1];
             e = time();
           
 	       q_stats[i].addQueryResult(qry[i][j],microseconds());
@@ -492,10 +613,10 @@ int main(int argc, char *argv[]) {
         }
         
         
-        {
-            string algo = "RMQ_SDSL_SCT";
-            RMQExperiment<rmq_succinct_sct<>> rmq(algo,&A,qv);
-        } 
+        // {
+        //     string algo = "RMQ_SDSL_SCT";
+        //     RMQExperiment<rmq_succinct_sct<>> rmq(algo,&A,qv);
+        // } 
         
         
         long int *B = new long int[N];
@@ -506,14 +627,18 @@ int main(int argc, char *argv[]) {
         memory_manager::clear(A);
         
         
-        {
-            executeRMQFerrada(B,N,qv);
-        }
+        // {
+        //     executeRMQFerrada(B,N,qv);
+        // }
 
         {
             executeRandomAccess(B,N,qv);
         }
         
+        {
+            executeRMQAntoine(B,N,qv);
+        }
+
         if(N < std::numeric_limits<int>::max()) {
             std::vector<long long> C(N);
             for(size_t i = 0; i < N; ++i) {
@@ -533,3 +658,4 @@ int main(int argc, char *argv[]) {
     
     
 }
+
