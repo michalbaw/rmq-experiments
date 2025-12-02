@@ -259,8 +259,6 @@ struct RMQF {
     ll getSize() {
         return (sizeof(T) * (s.size() + a.size() + c.size()) + sizeof(BT) * m.size()) / 8;
     }
-
-
 }; 
 
 void executeSDSLAntoine(long int *A, size_t N, vector<vector<query>>& qry) {
