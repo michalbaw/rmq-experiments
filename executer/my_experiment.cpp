@@ -21,7 +21,7 @@
 using namespace std;
 
 constexpr int INPUT_AND_QUERIES_GENERATIONS = 1e2;
-constexpr int INPUT_ARRAY_LENGTH = 1e8;
+constexpr int INPUT_ARRAY_LENGTH = 1e6;
 constexpr int NUMBER_OF_QUERIES = 1e5;
 using input_array_type = long long;
 constexpr input_array_type MIN_INPUT_ARRAY_VALUE = 0;
@@ -66,10 +66,11 @@ void experimentRandomAccess(const vector<pair<size_t, size_t>>& queries, const v
     }
 }
 
-void experimentUJLibSDSL(const vector<pair<size_t, size_t>>& queries, const vector<input_array_type>& input_array, bool print_benchmark_results = true) {
+template<class rmq_sdsl>
+void experimentSDSL(const std::string& algo_name, const vector<pair<size_t, size_t>>& queries, const vector<input_array_type>& input_array, bool print_benchmark_results = true) {
     sdsl::int_vector<> int_vec(INPUT_ARRAY_LENGTH, 0, 8 * sizeof(long long)); 
     for (int i = 0; i < INPUT_ARRAY_LENGTH; ++i) { int_vec[i] = input_array[i];}
-    sdsl::RMQ_Fast rmq(&int_vec);
+    rmq_sdsl rmq(&int_vec);
 
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < queries.size(); ++i) {
@@ -78,23 +79,7 @@ void experimentUJLibSDSL(const vector<pair<size_t, size_t>>& queries, const vect
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     if (print_benchmark_results) {
-        std::cout << "UJ_LIB_SDSL_VECTOR," << duration.count() << '\n';
-    }
-}
-
-void experimentSDSLSCT(const vector<pair<size_t, size_t>>& queries, const vector<input_array_type>& input_array, bool print_benchmark_results = true) {
-    sdsl::int_vector<> int_vec(INPUT_ARRAY_LENGTH, 0, 8 * sizeof(long long)); 
-    for (int i = 0; i < INPUT_ARRAY_LENGTH; ++i) { int_vec[i] = input_array[i];}
-    sdsl::rmq_succinct_sct<> rmq(&int_vec);
-
-    auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < queries.size(); ++i) {
-        output_variable = rmq(queries[i].first, queries[i].second);
-    }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    if (print_benchmark_results) {
-        std::cout << "SDSL_SCT," << duration.count() << '\n';
+        std::cout << algo_name << "," << duration.count() << '\n';
     }
 }
 
@@ -102,8 +87,10 @@ void generateInputDataAndRunExperiments(bool print_benchmark_results) {
     auto queries = getRandomQueries(NUMBER_OF_QUERIES);
     auto input_array = getRandomInputArray(INPUT_ARRAY_LENGTH);
     experimentRandomAccess(queries, input_array, print_benchmark_results);
-    experimentUJLibSDSL(queries, input_array, print_benchmark_results);
-    experimentSDSLSCT(queries, input_array, print_benchmark_results);
+    experimentSDSL<sdsl::RMQ_Fast>("UJ_LIB_SDSL", queries, input_array, print_benchmark_results);
+    experimentSDSL<sdsl::rmq_succinct_sct<>>("SDSL_SCT", queries, input_array, print_benchmark_results);
+    experimentSDSL<sdsl::rmq_succinct_rec_new<true, 0, 1024,128,0>>("RMQ_SDSL_REC", queries, input_array, print_benchmark_results);
+    experimentSDSL<sdsl::rmq_succinct_rec_new<true, 2048, 1024,128,0>>("RMQ_SDSL_REC_ST", queries, input_array, print_benchmark_results);
 }
 
 int main() {
