@@ -3,7 +3,7 @@
 	url = https://github.com/ot/succinct.git
 [submodule "rmq"]
 	path = rmq
-	url = https://github.com/hferrada/rmq.git
+	url = git@github.com:michalbaw/rmq-ferrada.git
 [submodule "sdsl-lite"]
 	path = sdsl-lite
-	url = https://github.com/michalbaw/sdsl-lite.git
+	url = git@github.com:michalbaw/sdsl-lite.git
