@@ -66,7 +66,7 @@ def execute_rmq_benchmark(sequence, query):
 
 
 def get_query_stats(out):
-    # print('DEBUG', 'out='+out)
+    # print('DEBUG', 'out='+out) # xd
     res = [str(out.split('Algo=')[1].split()[0])]
     res += [int(out.split('N=')[1].split()[0])]
     res += [float(out.split('Range=')[1].split()[0])]
