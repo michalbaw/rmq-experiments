@@ -128,6 +128,9 @@ def plot_data_frame(df, x, y, t, f, xticks):
     fig.savefig(f);
 
 def experiment(dirname):
+    try: os.stat("benchmark/");
+    except: os.mkdir("benchmark/");
+
     N = []
     for i in range(min_length,max_length+1):
         N += [pow(10,i)]

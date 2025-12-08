@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-std=c++11 -O3 
+CFLAGS=-std=c++23 -O3
 SDSL_PREFIX=-DNDEBUG -I ~/include -L ~/lib
 SDSL_SUFFIX=-lsdsl -ldivsufsort -ldivsufsort64
 FERRADA_LIB=rmq/rmqrmmBP.a
