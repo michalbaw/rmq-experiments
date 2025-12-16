@@ -1,12 +1,8 @@
-# Install and load required libraries
-install.packages("ggplot2", repos = "http://cran.us.r-project.org")
 library(dplyr)
 library(ggplot2)
 
-# Read the CSV file
-data <- read.csv("results/2025-11-23_rmq_experiments_random_8_0.csv")
+data <- read.csv("results/2025-12-09_rmq_experiment_random_8_0/query_result.csv")
 
-# Calculate statistics for each algorithm and N
 stats <- data %>%
   group_by(Algo, N, Range) %>%
   summarise(
@@ -23,13 +19,10 @@ stats <- data %>%
     .groups = 'drop'
   )
 
-# Print the results (force full display)
 print(as.data.frame(stats), row.names = FALSE)
 
-# Optional: Save results to CSV
 write.csv(stats, "rmq_statistics.csv", row.names = FALSE)
 
-# Optional: Create a summary table for each algorithm
 cat("\n=== Summary by Algorithm ===\n")
 for (algo in unique(data$Algo)) {
   cat("\n", algo, ":\n", sep = "")
@@ -37,7 +30,6 @@ for (algo in unique(data$Algo)) {
   print(as.data.frame(algo_stats), row.names = FALSE)
 }
 
-# Optional: Overall statistics by algorithm (across all N)
 overall_stats <- data %>%
   group_by(Algo) %>%
   summarise(
@@ -51,28 +43,23 @@ overall_stats <- data %>%
 cat("\n=== Overall Statistics by Algorithm ===\n")
 print(as.data.frame(overall_stats), row.names = FALSE)
 
-# Generate plots for each N value
 cat("\n=== Generating Plots ===\n")
-
-# Get unique N values
 n_values <- unique(stats$N)
-
-# Create a list to store all plots
 plot_list <- list()
 
-# Create a plot for each N value
 for (n_val in n_values) {
   cat("Creating plot for N =", n_val, "\n")
-  
-  # Filter data for this N
   plot_data <- stats %>% filter(N == n_val)
+
+  plot_data <- stats %>%
+    filter(N == n_val) %>%
+    filter(!Algo %in% c("RMQ_SDSL_SCT", "RMQ_SUCCINT", "RMQ_FAST", "RMQ_FERRADA"))
   
-  # Create the plot
   p <- ggplot(plot_data, aes(x = Range, y = mean_time, color = Algo, group = Algo)) +
     geom_line(size = 1) +
     geom_point(size = 3) +
-    scale_x_continuous(labels = scales::scientific) +
-    scale_y_continuous(labels = scales::scientific) +
+    scale_x_log10(labels = scales::scientific) +
+    scale_y_continuous() +
     labs(
       title = bquote("RMQ Algorithm Performance (N =" ~ .(scales::scientific(n_val)) ~ ")"),
       x = "Range (Query Range)",
@@ -84,8 +71,7 @@ for (n_val in n_values) {
       plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
       legend.position = "right"
     )
-  
-  # Add to list
+
   plot_list[[length(plot_list) + 1]] <- p
   
   # Save individual plot
