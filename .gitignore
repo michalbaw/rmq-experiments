@@ -13,4 +13,6 @@ pizza&chilli/*
 *.qry
 scripts/.RData
 scripts/.Rhistory
-.venv
+*.gitignore
+*.pdf
+*.csv
