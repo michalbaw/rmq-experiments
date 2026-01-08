@@ -17,6 +17,7 @@ seq_type="random"
 delta = 0
 count_cache_misses=False
 compare_sdsl=False
+mixed_queries=False
 
 
 def exe(cmd):
@@ -149,11 +150,18 @@ def experiment(dirname):
         #Create Query-Files
         query_files = []
         Q = []
-        for i in range(1,int(np.log10(n))):
-            qry = 'benchmark/' + str(pow(10,i)) + '.qry'
+        if mixed_queries:
+            qry = 'benchmark/mixed.qry'
             query_files += [qry]
-            Q += [pow(10,i)]
-            create_query(n,num_query,pow(10,i),qry);   
+            create_query(n,num_query,0,qry)
+            Q += ['mixed']
+        else:
+            for i in range(1,int(np.log10(n))):
+                Q += [pow(10,i)]
+                qry = 'benchmark/' + str(pow(10,i)) + '.qry'
+                query_files += [qry]    
+                create_query(n,num_query,pow(10,i),qry);   
+
         print("    ... Query Ranges R="+str(Q)+".")
         
         #Create HTML-Folder for Memory-Usage
@@ -215,6 +223,7 @@ if __name__ == '__main__':
     parser.add_argument("--seq_type", type=str)
     parser.add_argument("--delta", type=int)
     parser.add_argument("--count_cache_misses", type=int)
+    parser.add_argument("--mixed_queries", type=bool)
     args = parser.parse_args()
     
     if args.compare_sdsl != None:
@@ -229,6 +238,8 @@ if __name__ == '__main__':
         delta = args.delta
     if args.count_cache_misses != None:
         count_cache_misses = args.count_cache_misses
+    if args.mixed_queries != None:
+        mixed_queries = True
         
     print('Configuration\n=============')
     print('Compare SDSL Variants   = ' + str(compare_sdsl)    )
@@ -237,6 +248,7 @@ if __name__ == '__main__':
     print('Sequence Type           = ' + seq_type)
     print('Sequence Delta          = ' + str(delta))
     print('Count Cache Misses      = ' + str(count_cache_misses))
+    print('Mixed queries           = ' + str(mixed_queries))
     print('\n')
     
     dirname = setup_experiment_environment()

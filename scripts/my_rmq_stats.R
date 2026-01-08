@@ -1,10 +1,13 @@
 library(dplyr)
 library(ggplot2)
 
-data <- read.csv("results/2025-12-09_rmq_experiment_random_8_0/query_result.csv")
+data <- read.csv("results/2025-12-17_rmq_experiment_random_8_0/query_result.csv")
+
+data <- data %>%
+  mutate(RangeBin = 10^floor(log10(Range)))
 
 stats <- data %>%
-  group_by(Algo, N, Range) %>%
+  group_by(Algo, N, RangeBin) %>%
   summarise(
     count = n(),
     mean_time = mean(Time),
@@ -49,20 +52,19 @@ plot_list <- list()
 
 for (n_val in n_values) {
   cat("Creating plot for N =", n_val, "\n")
-  plot_data <- stats %>% filter(N == n_val)
-
+  
   plot_data <- stats %>%
     filter(N == n_val) %>%
     filter(!Algo %in% c("RMQ_SDSL_SCT", "RMQ_SUCCINT", "RMQ_FAST", "RMQ_FERRADA"))
-  
-  p <- ggplot(plot_data, aes(x = Range, y = mean_time, color = Algo, group = Algo)) +
+
+  p <- ggplot(plot_data, aes(x = RangeBin, y = mean_time, color = Algo, group = Algo)) +
     geom_line(size = 1) +
     geom_point(size = 3) +
     scale_x_log10(labels = scales::scientific) +
     scale_y_continuous() +
     labs(
       title = bquote("RMQ Algorithm Performance (N =" ~ .(scales::scientific(n_val)) ~ ")"),
-      x = "Range (Query Range)",
+      x = "Range Bin [10^k, 10^(k+1))",
       y = "Mean Time (seconds)",
       color = "Algorithm"
     ) +

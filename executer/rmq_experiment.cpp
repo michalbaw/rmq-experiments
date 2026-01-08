@@ -136,10 +136,11 @@ public:
         }
         c_stats.printConstructionStats();
         write_structure<HTML_FORMAT>(rmq, "HTML/"+algo+".html");
-        
-       for(int i = 0; i < qry.size(); ++i) {
+
+        for(int i = 0; i < qry.size(); ++i) {
             for(int j = 0; j < qry[i].size(); ++j) {
                 ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+                // std::cout << i1 << " " << i2 << std::endl;
                 volatile auto res = rmq(i1,i2);
             }
         }
@@ -155,7 +156,7 @@ public:
                     exit(-1);   
                 }
             }
-            
+
             for(int j = 0; j < qry[i].size(); ++j) {
                 ll i1 = qry[i][j].first, i2 = qry[i][j].second;
             
