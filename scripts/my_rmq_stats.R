@@ -17,6 +17,8 @@ stats <- data %>%
     ci_high = mean_time + 1.96 * sem_time,
     min_time = min(Time),
     max_time = max(Time),
+    q025 = quantile(Time, 0.025),
+    q975 = quantile(Time, 0.975),
     q25 = quantile(Time, 0.25),
     median = quantile(Time, 0.50),
     q75 = quantile(Time, 0.75),
@@ -42,6 +44,8 @@ overall_stats <- data %>%
   summarise(
     count = n(),
     mean_time = mean(Time),
+    q025 = quantile(Time, 0.025),
+    q975 = quantile(Time, 0.975),
     sd_time = sd(Time),
     median = median(Time),
     .groups = 'drop'
@@ -63,14 +67,18 @@ for (n_val in n_values) {
 
   p <- ggplot(plot_data, aes(x = RangeBin, y = mean_time, color = Algo, group = Algo)) +
   geom_ribbon(
-    aes(ymin = ci_low, ymax = ci_high, fill = Algo),
-    alpha = 0.15,
+    aes(
+      ymin = q025,
+      ymax = q975,
+      fill = Algo
+    ),
+    alpha = 0.2,
     color = NA
   ) + 
   geom_line(size = 1) +
   geom_point(size = 3) +
   geom_errorbar(
-    aes(ymin = mean_time - sd_time, ymax = mean_time + sd_time),
+    aes(ymin = ci_low, ymax = ci_high),
     width = 0.1,
     alpha = 0.6
   ) +
