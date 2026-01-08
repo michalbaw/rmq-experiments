@@ -12,6 +12,9 @@ stats <- data %>%
     count = n(),
     mean_time = mean(Time),
     sd_time = sd(Time),
+    sem_time = sd_time / sqrt(count),
+    ci_low = mean_time - 1.96 * sem_time,
+    ci_high = mean_time + 1.96 * sem_time,
     min_time = min(Time),
     max_time = max(Time),
     q25 = quantile(Time, 0.25),
@@ -21,6 +24,7 @@ stats <- data %>%
     q99 = quantile(Time, 0.99),
     .groups = 'drop'
   )
+
 
 print(as.data.frame(stats), row.names = FALSE)
 
@@ -58,21 +62,25 @@ for (n_val in n_values) {
     filter(!Algo %in% c("RMQ_SDSL_SCT", "RMQ_SUCCINT", "RMQ_FAST", "RMQ_FERRADA"))
 
   p <- ggplot(plot_data, aes(x = RangeBin, y = mean_time, color = Algo, group = Algo)) +
-    geom_line(size = 1) +
-    geom_point(size = 3) +
-    scale_x_log10(labels = scales::scientific) +
-    scale_y_continuous() +
-    labs(
-      title = bquote("RMQ Algorithm Performance (N =" ~ .(scales::scientific(n_val)) ~ ")"),
-      x = "Range Bin [10^k, 10^(k+1))",
-      y = "Mean Time (seconds)",
-      color = "Algorithm"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-      legend.position = "right"
-    )
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  geom_errorbar(
+    aes(ymin = ci_low, ymax = ci_high),
+    width = 0.1,
+    alpha = 0.6
+  ) +
+  scale_x_log10(labels = scales::scientific) +
+  labs(
+    title = bquote("RMQ Algorithm Performance (N =" ~ .(scales::scientific(n_val)) ~ ")"),
+    x = "Range Bin [10^k, 10^(k+1))",
+    y = "Mean Time (seconds)",
+    color = "Algorithm"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    legend.position = "right"
+  )
 
   plot_list[[length(plot_list) + 1]] <- p
   
