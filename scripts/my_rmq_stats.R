@@ -62,6 +62,11 @@ for (n_val in n_values) {
     filter(!Algo %in% c("RMQ_SDSL_SCT", "RMQ_SUCCINT", "RMQ_FAST", "RMQ_FERRADA"))
 
   p <- ggplot(plot_data, aes(x = RangeBin, y = mean_time, color = Algo, group = Algo)) +
+  geom_ribbon(
+    aes(ymin = ci_low, ymax = ci_high, fill = Algo),
+    alpha = 0.15,
+    color = NA
+  ) + 
   geom_line(size = 1) +
   geom_point(size = 3) +
   geom_errorbar(
