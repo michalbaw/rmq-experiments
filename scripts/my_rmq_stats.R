@@ -65,7 +65,7 @@ for (n_val in n_values) {
   geom_line(size = 1) +
   geom_point(size = 3) +
   geom_errorbar(
-    aes(ymin = ci_low, ymax = ci_high),
+    aes(ymin = mean_time - sd_time, ymax = mean_time + sd_time),
     width = 0.1,
     alpha = 0.6
   ) +
