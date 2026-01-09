@@ -20,6 +20,7 @@ count_cache_misses=False
 compare_sdsl=False
 mixed_queries=False
 log_bins=False
+retries=1
 
 
 def exe(cmd):
@@ -142,66 +143,67 @@ def experiment(dirname):
     query_res = []
     construct_res = []
     cache_miss_res = []
-    for n in N:
-        print('Sequence length N=10^'+str(int(np.log10(n)))+' and ...')
-        seq = 'benchmark/' + str(n) + '.seq'
-        
-        #Create Sequence of length n
-        create_sequence(n,1,n,seq);
-         
-        #Create Query-Files
-        query_files = []
-        Q = []
-        if log_bins:
-            qry = 'benchmark/mixed.qry'
-            query_files += [qry]
-            create_query(n,num_query,0,qry)
-            Q += ['mixed']
-        elif mixed_queries:
-            all_queries = []
-            for i in range(1,int(np.log10(n))):
-                qry = 'benchmark/' + str(pow(10,i)) + '.qry'
-                create_query(n,num_query,pow(10,i),qry);
-                with open(qry, 'r') as f:
-                    next(f)
-                    all_queries.extend(f)
-            random.shuffle(all_queries)
-            all_queries.insert(0, f"{len(all_queries)}\n")
-
-            query_files += ['benchmark/shuffled_queries.qry']
-            Q += ['shuffled_queries']
-            with open('benchmark/shuffled_queries.qry', 'w') as out:
-                out.writelines(all_queries)
-        else:
-            for i in range(1,int(np.log10(n))):
-                Q += [pow(10,i)]
-                qry = 'benchmark/' + str(pow(10,i)) + '.qry'
-                query_files += [qry]
-                create_query(n,num_query,pow(10,i),qry);
-
-        print("    ... Query Ranges R="+str(Q)+".")
-        
-        #Create HTML-Folder for Memory-Usage
-        try: os.stat("HTML/");
-        except: os.mkdir("HTML/");
-        
-        #Execute Benchmark
-        benchmark_res = execute_rmq_benchmark(seq,query_files)
-        for q in benchmark_res[0]:
-            query_res.append(get_query_stats(q));
-        for c in benchmark_res[1]:
-            construct_res.append(get_construction_stats(c));
-        if(count_cache_misses):
-            for c in benchmark_res[2]:
-                cache_miss_res.append(get_cache_miss_stats(c));
+    for retry in range(retries):
+        for n in N:
+            print('Sequence length N=10^'+str(int(np.log10(n)))+' and ...')
+            seq = 'benchmark/' + str(n) + '.seq'
             
-        #Validate Result of Benchmark
-        check_results()
-        
-        #Clean-Up
-        delete_folder_content("benchmark/")
-        shutil.move("HTML/",dirname + "HTML_10^"+(str(int(np.log10(n)))))
-        print('\n')
+            #Create Sequence of length n
+            create_sequence(n,1,n,seq);
+            
+            #Create Query-Files
+            query_files = []
+            Q = []
+            if log_bins:
+                qry = 'benchmark/mixed.qry'
+                query_files += [qry]
+                create_query(n,num_query,0,qry)
+                Q += ['mixed']
+            elif mixed_queries:
+                all_queries = []
+                for i in range(1,int(np.log10(n))):
+                    qry = 'benchmark/' + str(pow(10,i)) + '.qry'
+                    create_query(n,num_query,pow(10,i),qry);
+                    with open(qry, 'r') as f:
+                        next(f)
+                        all_queries.extend(f)
+                random.shuffle(all_queries)
+                all_queries.insert(0, f"{len(all_queries)}\n")
+
+                query_files += ['benchmark/shuffled_queries.qry']
+                Q += ['shuffled_queries']
+                with open('benchmark/shuffled_queries.qry', 'w') as out:
+                    out.writelines(all_queries)
+            else:
+                for i in range(1,int(np.log10(n))):
+                    Q += [pow(10,i)]
+                    qry = 'benchmark/' + str(pow(10,i)) + '.qry'
+                    query_files += [qry]
+                    create_query(n,num_query,pow(10,i),qry);
+
+            print("    ... Query Ranges R="+str(Q)+".")
+            
+            # #Create HTML-Folder for Memory-Usage
+            # try: os.stat("HTML/");
+            # except: os.mkdir("HTML/");
+            
+            #Execute Benchmark
+            benchmark_res = execute_rmq_benchmark(seq,query_files)
+            for q in benchmark_res[0]:
+                query_res.append(get_query_stats(q));
+            for c in benchmark_res[1]:
+                construct_res.append(get_construction_stats(c));
+            if(count_cache_misses):
+                for c in benchmark_res[2]:
+                    cache_miss_res.append(get_cache_miss_stats(c));
+                
+            #Validate Result of Benchmark
+            check_results()
+            
+            #Clean-Up
+            delete_folder_content("benchmark/")
+            # shutil.move("HTML/",dirname + "HTML_10^"+(str(int(np.log10(n)))))
+            print('\n')
 
     #Construct CSV-Table with Query and Construction results
     cols_query = ['Algo','N','Range','Time']
@@ -242,6 +244,7 @@ if __name__ == '__main__':
     parser.add_argument("--count_cache_misses", type=int)
     parser.add_argument("--mixed_queries", type=bool)
     parser.add_argument("--log_bins", type=bool)
+    parser.add_argument("--retries", type=int)
     args = parser.parse_args()
     
     if args.compare_sdsl != None:
@@ -260,6 +263,8 @@ if __name__ == '__main__':
         mixed_queries = True
     if args.log_bins != None:
         log_bins = True
+    if args.retries != None:
+        retries = int(args.retries)
         
     print('Configuration\n=============')
     print('Compare SDSL Variants   = ' + str(compare_sdsl)    )

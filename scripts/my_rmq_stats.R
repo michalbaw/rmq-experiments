@@ -1,7 +1,7 @@
 library(dplyr)
 library(ggplot2)
 
-data <- read.csv("results/2026-01-09_rmq_experiment_random_8_0_with_cache_misses/query_result.csv")
+data <- read.csv("results/2026-01-09_rmq_experiment_random_6_0_with_cache_misses/query_result.csv")
 
 data <- data %>%
   mutate(RangeBin = 10^floor(log10(Range)))
