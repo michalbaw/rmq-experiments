@@ -8,7 +8,7 @@ import re, sys
 import os, glob
 import shutil
 
-num_query=100000
+num_query=10000
 reference="RMQ_SDSL_SCT"
 
 min_length=6
