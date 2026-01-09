@@ -7,6 +7,7 @@ import argparse
 import re, sys
 import os, glob
 import shutil
+import random
 
 num_query=10000
 reference="RMQ_SDSL_SCT"
@@ -18,6 +19,7 @@ delta = 0
 count_cache_misses=False
 compare_sdsl=False
 mixed_queries=False
+log_bins=False
 
 
 def exe(cmd):
@@ -150,17 +152,32 @@ def experiment(dirname):
         #Create Query-Files
         query_files = []
         Q = []
-        if mixed_queries:
+        if log_bins:
             qry = 'benchmark/mixed.qry'
             query_files += [qry]
             create_query(n,num_query,0,qry)
             Q += ['mixed']
+        elif mixed_queries:
+            all_queries = []
+            for i in range(1,int(np.log10(n))):
+                qry = 'benchmark/' + str(pow(10,i)) + '.qry'
+                create_query(n,num_query,pow(10,i),qry);
+                with open(qry, 'r') as f:
+                    next(f)
+                    all_queries.extend(f)
+            random.shuffle(all_queries)
+            all_queries.insert(0, f"{len(all_queries)}\n")
+
+            query_files += ['benchmark/shuffled_queries.qry']
+            Q += ['shuffled_queries']
+            with open('benchmark/shuffled_queries.qry', 'w') as out:
+                out.writelines(all_queries)
         else:
             for i in range(1,int(np.log10(n))):
                 Q += [pow(10,i)]
                 qry = 'benchmark/' + str(pow(10,i)) + '.qry'
-                query_files += [qry]    
-                create_query(n,num_query,pow(10,i),qry);   
+                query_files += [qry]
+                create_query(n,num_query,pow(10,i),qry);
 
         print("    ... Query Ranges R="+str(Q)+".")
         
@@ -224,6 +241,7 @@ if __name__ == '__main__':
     parser.add_argument("--delta", type=int)
     parser.add_argument("--count_cache_misses", type=int)
     parser.add_argument("--mixed_queries", type=bool)
+    parser.add_argument("--log_bins", type=bool)
     args = parser.parse_args()
     
     if args.compare_sdsl != None:
@@ -240,6 +258,8 @@ if __name__ == '__main__':
         count_cache_misses = args.count_cache_misses
     if args.mixed_queries != None:
         mixed_queries = True
+    if args.log_bins != None:
+        log_bins = True
         
     print('Configuration\n=============')
     print('Compare SDSL Variants   = ' + str(compare_sdsl)    )
