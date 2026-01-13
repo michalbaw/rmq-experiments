@@ -1,7 +1,7 @@
 library(dplyr)
 library(ggplot2)
 
-data <- read.csv("results/2026-01-09_rmq_experiment_random_6_0_with_cache_misses/query_result.csv")
+data <- read.csv("results/2026-01-09_rmq_experiment_random_7_0_with_cache_misses/query_result.csv")
 
 data <- data %>%
   mutate(RangeBin = 10^floor(log10(Range)))
@@ -83,6 +83,7 @@ for (n_val in n_values) {
     alpha = 0.6
   ) +
   scale_x_log10(labels = scales::scientific) +
+  scale_y_continuous(limits = c(0, 1.25)) +
   labs(
     title = bquote("RMQ Algorithm Performance (N =" ~ .(scales::scientific(n_val)) ~ ")"),
     x = "Range Bin [10^k, 10^(k+1))",

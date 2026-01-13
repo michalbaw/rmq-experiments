@@ -93,7 +93,7 @@ query_range_cache_miss_ratio_plot <- function(d, title="") {
 experiment_dir="results/"
 date="2026-01-09"
 seq_type="random"
-max_length="6"
+max_length="7"
 delta="0"
 tmp <- cbind(date,"rmq_experiment",seq_type,max_length,delta,"with_cache_misses")
 experiment <- str_c(tmp,collapse='_');
