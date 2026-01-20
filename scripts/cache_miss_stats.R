@@ -91,8 +91,8 @@ query_range_cache_miss_ratio_plot <- function(d, title="") {
 
 #==========Experiment===========#
 #experiment_dir="C:\\Users\\tobia\\Documents\\home\\theuer\\rmq-experiments\\results\\"
-experiment_dir="/home/theuer/Dokumente/rmq-experiments/results/"
-date="2017-12-06"
+experiment_dir="./results/"
+date="2025-12-17"
 seq_type="random"
 max_length="8"
 delta="0"

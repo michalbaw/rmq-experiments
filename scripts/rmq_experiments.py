@@ -8,7 +8,7 @@ import re, sys
 import os, glob
 import shutil
 
-num_query=100000
+num_query=10000
 reference="RMQ_SDSL_SCT"
 
 min_length=6
@@ -17,6 +17,7 @@ seq_type="random"
 delta = 0
 count_cache_misses=False
 compare_sdsl=False
+check_function=False
 
 
 def exe(cmd):
@@ -61,6 +62,8 @@ def execute_rmq_benchmark(sequence, query):
     else: cmd += ['0']
     if(compare_sdsl): cmd += ['1']
     else: cmd += ['0']
+    if(check_function): cmd += ['1']
+    else: cmd += ['0']
     res = exe(cmd)
     return [grep(res,'QUERY_RESULT').split('\n'),grep(res,'CONSTRUCTION_RESULT').split('\n'),grep(res,'CACHE_MISS_RESULT').split('\n')]
 
@@ -71,6 +74,7 @@ def get_query_stats(out):
     res += [int(out.split('N=')[1].split()[0])]
     res += [float(out.split('Range=')[1].split()[0])]
     res += [float(out.split('Time=')[1].split()[0])]
+    res += [int(out.split('Function=')[1].split()[0])]
     return res
 
 def get_construction_stats(out):
@@ -179,7 +183,7 @@ def experiment(dirname):
         print('\n')
 
     #Construct CSV-Table with Query and Construction results
-    cols_query = ['Algo','N','Range','Time']
+    cols_query = ['Algo','N','Range','Time','Function']
     df_query = pd.DataFrame(query_res,columns=cols_query)
     df_query.to_csv(dirname + 'query_result.csv')
     
@@ -215,6 +219,7 @@ if __name__ == '__main__':
     parser.add_argument("--seq_type", type=str)
     parser.add_argument("--delta", type=int)
     parser.add_argument("--count_cache_misses", type=int)
+    parser.add_argument("--check_function", type=int)
     args = parser.parse_args()
     
     if args.compare_sdsl != None:
@@ -229,6 +234,8 @@ if __name__ == '__main__':
         delta = args.delta
     if args.count_cache_misses != None:
         count_cache_misses = args.count_cache_misses
+    if args.check_function != None:
+        check_function = args.check_function
         
     print('Configuration\n=============')
     print('Compare SDSL Variants   = ' + str(compare_sdsl)    )
@@ -237,6 +244,7 @@ if __name__ == '__main__':
     print('Sequence Type           = ' + seq_type)
     print('Sequence Delta          = ' + str(delta))
     print('Count Cache Misses      = ' + str(count_cache_misses))
+    print('Check function          = ' + str(check_function))
     print('\n')
     
     dirname = setup_experiment_environment()

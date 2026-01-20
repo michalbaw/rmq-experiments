@@ -1,7 +1,9 @@
 library(dplyr)
 library(ggplot2)
 
-data <- read.csv("results/2025-12-09_rmq_experiment_random_8_0/query_result.csv")
+path_base <- "results/2025-12-17_rmq_experiment_random_8_0/"
+
+data <- read.csv(paste(path_base, "query_result.csv", sep=""))
 
 stats <- data %>%
   group_by(Algo, N, Range) %>%
@@ -89,3 +91,44 @@ dev.off()
 
 cat("\nIndividual plots saved as: rmq_plot_N_*.png\n")
 cat("All plots saved together in: rmq_all_plots.pdf\n")
+
+construct_data <- read.csv(paste(path_base, "construct_result.csv", sep=""))
+
+cat("=== Construction Data Summary ===\n")
+print(summary(construct_data))
+
+construct_stats <- construct_data %>%
+  group_by(Algo, N) %>%
+  summarise(
+    count = n(),
+    mean_construct_time = mean(ConstructTime),
+    sd_construct_time = sd(ConstructTime),
+    mean_bpe = mean(BPE),
+    sd_bpe = sd(BPE),
+    .groups = 'drop'
+  )
+
+cat("\n=== Construction Statistics ===\n")
+print(as.data.frame(construct_stats), row.names = FALSE)
+
+cat("\n=== Creating BPE Plot ===\n")
+
+bpe_plot <- ggplot(construct_stats, aes(x = N, y = mean_bpe, color = Algo, group = Algo)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  scale_x_log10(labels = scales::scientific) +
+  scale_y_continuous() +
+  labs(
+    title = "RMQ Algorithm Memory Usage (Bits Per Element)",
+    x = "N (Structure Size)",
+    y = "Bits Per Element (BPE)",
+    color = "Algorithm"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    legend.position = "right"
+  )
+
+# Save BPE plot
+ggsave("rmq_bpe_plot.pdf", plot = bpe_plot, width = 10, height = 6)

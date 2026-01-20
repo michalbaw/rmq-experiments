@@ -39,20 +39,22 @@ struct query_stats {
     std::vector<query> q;
     std::vector<double> q_time;
     string algo;
+    std::vector<int> function_answered;
     
     query_stats(string& algo) : algo(algo) { }
     
-    void addQueryResult(query& qu, double time) {
+    void addQueryResult(query& qu, double time, int functionAnswered) {
         q.push_back(qu);
         q_time.push_back(time);
+        function_answered.push_back(functionAnswered);
     }
     
     
     void printQueryStats() {
         for(size_t i = 0; i < q.size(); ++i) {
             ll range = q[i].second - q[i].first + 1;
-            printf("QUERY_RESULT Algo=%s N=%zu Range=%lld Time=%f\n", 
-                    algo.c_str(), N, range, q_time[i]);
+            printf("QUERY_RESULT Algo=%s N=%zu Range=%lld Time=%f Function=%d\n", 
+                    algo.c_str(), N, range, q_time[i], function_answered[i]);
         }
     }
     
@@ -120,7 +122,7 @@ double microseconds() {
     return elapsed_seconds.count()*MICRO;
 }
 
-template<class RMQ>
+template<class RMQ, bool askFunctionAnswered=false>
 class RMQExperiment {
     
 public:
@@ -164,7 +166,8 @@ public:
                 e = time();
                 
                 out << res << "\n";
-                q_stats[i].addQueryResult(qry[i][j],microseconds());
+                int functionAnswered = askFunctionAnswered ? rmq.getFunctionAnswered() : 0;
+                q_stats[i].addQueryResult(qry[i][j],microseconds(),functionAnswered);
             }
            
             if(count_cache_misses) {
@@ -233,7 +236,7 @@ void executeRMQFerrada(long int *A, size_t N, vector<vector<query>>& qry) {
             auto res = rmq.queryRMQ(i1,i2);
             e = time();
           
-	       q_stats[i].addQueryResult(qry[i][j],microseconds());
+	       q_stats[i].addQueryResult(qry[i][j],microseconds(),0);
         }
         
         if(count_cache_misses) {
@@ -295,7 +298,7 @@ void executeRMQSuccinct(std::vector<long long>& A, size_t N, vector<vector<query
             auto res = rmq.rmq(i1,i2);
             e = time();
   
-            q_stats[i].addQueryResult(qry[i][j],microseconds());
+            q_stats[i].addQueryResult(qry[i][j],microseconds(),0);
         }
         
         if(count_cache_misses) {
@@ -414,13 +417,13 @@ int main(int argc, char *argv[]) {
         
         {
             string algo = "RMQ_SDSL_REC"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 0, 1024,128,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, 0, 1024,128,0>,true> rmq(algo,&A,qv);
         }
 
 
         {
             string algo = "RMQ_SDSL_REC_ST"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 2048, 1024,128,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, 2048, 1024,128,0>,true> rmq(algo,&A,qv);
         }
         
         
