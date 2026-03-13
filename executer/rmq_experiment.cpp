@@ -1,3 +1,4 @@
+#include "../alstrup/rmq.cpp"
 #include <sdsl/rmq_support.hpp> // include header for range minimum queries
 #include "sdsl/memory_management.hpp"
 #include <algorithm>
@@ -194,6 +195,133 @@ private:
 };
 
 
+void executeRMQAlstrupDefault(long int *A, size_t N, vector<vector<query>>& qry) {
+    string algo = "RMQ_ALSTRUP";
+    vector<query_stats> q_stats(qry.size(),query_stats(algo));
+    construction_stats c_stats(algo);
+    cache_miss_stats cache_stats(N,algo);
+    
+
+    vector<long int> vA(N);
+    for (int i = 0; i < N; ++i) vA[i] = A[i];
+    s = time();
+    RMQ_Alstrup<long int> rmq(vA);
+    e = time();
+    
+    c_stats.addConstructionResult(N,milliseconds(),
+                                  8.0*(static_cast<double>(0)/static_cast<double>(N)));
+    c_stats.printConstructionStats();
+    
+    for(int i = 0; i < qry.size(); ++i) {
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            volatile auto res = rmq.get(i1,i2);
+        }
+    }
+
+    for(int i = 0; i < qry.size(); ++i) {
+        q_stats[i].N = N;
+        
+        if(count_cache_misses) {
+            bool success = hw_event.start(PERF_COUNT_HW_CACHE_MISSES); 
+            if(!success) {
+                perror("perf_event_open");
+                exit(-1);   
+            }
+        }
+        
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            if(i1 > ULONG_MAX || i2 > ULONG_MAX) continue;
+            
+            s = time();
+            volatile auto res = rmq.get(i1,i2);
+            e = time();
+          
+	       q_stats[i].addQueryResult(qry[i][j],microseconds());
+        }
+        
+        if(count_cache_misses) {
+            hw_event.stop();
+            size_t range = qry[i][0].second - qry[i][0].first + 1;
+            double cache_miss = static_cast<double>(hw_event.getCacheMisses())/qry[i].size();
+            double cache_ref = static_cast<double>(hw_event.getCacheReferences())/qry[i].size();
+            double miss_ratio = cache_miss/cache_ref;
+            cache_stats.addCacheMissResult(range,miss_ratio,cache_miss,cache_ref);
+        }
+        
+        q_stats[i].printQueryStats();
+    }
+    
+    if(count_cache_misses) {
+        cache_stats.printCacheMissStats();
+    }
+    
+}
+
+void executeRMQAlstrupModifiedSparseTable(long int *A, size_t N, vector<vector<query>>& qry) {
+    string algo = "RMQ_ALSTRUP_MODIFIED_ST";
+    vector<query_stats> q_stats(qry.size(),query_stats(algo));
+    construction_stats c_stats(algo);
+    cache_miss_stats cache_stats(N,algo);
+
+    vector<long int> vA(N);
+    for (int i = 0; i < N; ++i) vA[i] = A[i];
+    s = time();
+    RMQF<long int> rmq(vA);
+    e = time();
+    
+    c_stats.addConstructionResult(N,milliseconds(),
+                                  8.0*(static_cast<double>(0)/static_cast<double>(N)));
+    c_stats.printConstructionStats();
+    
+    for(int i = 0; i < qry.size(); ++i) {
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            volatile auto res = rmq.get(i1,i2);
+        }
+    }
+
+    for(int i = 0; i < qry.size(); ++i) {
+        q_stats[i].N = N;
+        
+        if(count_cache_misses) {
+            bool success = hw_event.start(PERF_COUNT_HW_CACHE_MISSES); 
+            if(!success) {
+                perror("perf_event_open");
+                exit(-1);   
+            }
+        }
+        
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            if(i1 > ULONG_MAX || i2 > ULONG_MAX) continue;
+            
+            s = time();
+            volatile auto res = rmq.get(i1,i2);
+            e = time();
+          
+	       q_stats[i].addQueryResult(qry[i][j],microseconds());
+        }
+        
+        if(count_cache_misses) {
+            hw_event.stop();
+            size_t range = qry[i][0].second - qry[i][0].first + 1;
+            double cache_miss = static_cast<double>(hw_event.getCacheMisses())/qry[i].size();
+            double cache_ref = static_cast<double>(hw_event.getCacheReferences())/qry[i].size();
+            double miss_ratio = cache_miss/cache_ref;
+            cache_stats.addCacheMissResult(range,miss_ratio,cache_miss,cache_ref);
+        }
+        
+        q_stats[i].printQueryStats();
+    }
+    
+    if(count_cache_misses) {
+        cache_stats.printCacheMissStats();
+    }
+    
+}
+
 void executeRMQFerrada(long int *A, size_t N, vector<vector<query>>& qry) {
     string algo = "RMQ_FERRADA";
     vector<query_stats> q_stats(qry.size(),query_stats(algo));
@@ -316,7 +444,6 @@ void executeRMQSuccinct(std::vector<long long>& A, size_t N, vector<vector<query
     }
     
 }
-    
 
 int main(int argc, char *argv[]) {
     
@@ -425,10 +552,10 @@ int main(int argc, char *argv[]) {
         }
         
         
-        {
-            string algo = "RMQ_SDSL_SCT";
-            RMQExperiment<rmq_succinct_sct<>> rmq(algo,&A,qv);
-        } 
+        // {
+        //     string algo = "RMQ_SDSL_SCT";
+        //     RMQExperiment<rmq_succinct_sct<>> rmq(algo,&A,qv);
+        // } 
         
         {
             string algo = "RMQ_SDSL_FAST";
@@ -446,11 +573,18 @@ int main(int argc, char *argv[]) {
             if(B[i] != A[i]) return -1;
         }
         memory_manager::clear(A);
-        
-        
+
+        // {
+        //     executeRMQFerrada(B,N,qv);
+        // } 
+
         {
-            executeRMQFerrada(B,N,qv);
-        } 
+            executeRMQAlstrupDefault(B,N,qv);
+        }
+
+        {
+            executeRMQAlstrupModifiedSparseTable(B,N,qv);
+        }
         
         if(N < std::numeric_limits<int>::max()) {
             std::vector<long long> C(N);
@@ -460,9 +594,9 @@ int main(int argc, char *argv[]) {
             }
             delete [] B;
             
-            {
-                executeRMQSuccinct(C,N,qv);
-            }
+            // {
+            //     executeRMQSuccinct(C,N,qv);
+            // }
         }
         else {
             delete [] B;
