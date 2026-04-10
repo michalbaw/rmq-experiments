@@ -186,71 +186,62 @@ struct RMQF {
 
 template<class T>
 struct SparseTableRMQ {
-	vector<vector<pair<T, uint32_t>>> s;
-	SparseTableRMQ(vector<T> a = {}) : s(1) {
+	vector<vector<T> > s;
+	SparseTableRMQ(vector<T> a = {}) : s(1, a) {
 		if (!sz(a)) return;
-        s[0].resize(sz(a));
-        for (int i = 0; i < sz(a); ++i) s[0][i] = {a[i], i};
-
 		rep(d, __lg(sz(a))) {
 			s.eb(sz(a) - (1 << d) * 2 + 1);
-			rep(j, sz(s[d + 1])) {
-                s[d+1][j] = min(s[d][j], s[d][j + (1 << d)]);
-            }
+			rep(j, sz(s[d + 1]))
+				s[d + 1][j] = min(s[d][j], s[d][j + (1 << d)]);
 		}
 	}
-    uint32_t get(int l, int r) {
-        int d = __lg(r - l + 1);
-        if (d == 0) return l;
-        return min(s[d][l], s[d][r - (1 << d) + 1]).second;
-    }
+	T get(int l, int r) {
+		int d = __lg(r - l + 1);
+		return min(s[d][l], s[d][r - (1 << d) + 1]);
+	}
 };
 
 template<class T>
 struct RMQ_Alstrup {
 	static constexpr int B = 32; // not larger!
-	SparseTableRMQ<T> s;
-    vector<uint32_t> s_map;
-	vector<uint32_t> m;
-	vector<T> a, c;
-	RMQ_Alstrup(vector<T> A = {}) : m(sz(A)), a(A), c(sz(A)) {
+	SparseTableRMQ<pair<T, uint32_t>> s;
+    using pair_type = pair<T, uint32_t>;
+    vector<pair_type> val_mask;
+	vector<T> a;
+
+	RMQ_Alstrup(vector<T> A = {}) : a(A), val_mask(sz(A)) {
 		int nb = (sz(a) + B - 1) / B;
         // block minimums
-        vector<T> b(nb);
-        // sparse table index mapping
-        s_map.resize(nb);
+        vector<pair<T, uint32_t>> b(nb);
         // monotone queue
 		uint32_t mi = 0;
 		rep(i, sz(a)) {
             // update block minimum and block minimum index
-            if (i % B == 0 || a[i] < b[i / B]) {
-                b[i / B]    = a[i];
-                s_map[i / B] = i;
-            }
+            b[i / B] = (i % B ? min(b[i / B], pair_type{a[i], i}) : pair_type{a[i], i}); 
             // move queue 1 left
 			mi <<= 1;
             // pop all values larger then the current one from the queue
 			while (mi && a[i] < a[i - __builtin_ctz(mi)])
 				mi ^= (1u << __builtin_ctz(mi));
 			// add current value to queue
-            m[i] = mi ^= 1;
+            val_mask[i].second = mi ^= 1;
             // calculate smallest value in the current 32-block
-            c[i] = a[i - __lg(m[i])];
+            val_mask[i].first = a[i - __lg(mi)];
 		}
         // recursibly construct ST
-		s = SparseTableRMQ(b);
+		s = SparseTableRMQ<pair<T, uint32_t>>(b);
 	}
 	uint32_t get(int l, int r) {
 		// if the interval is small we can use montone queues
+        auto [right_val, right_mask] = val_mask[r];
         if (r - l + 1 < B) {
-			return r - __lg(m[r] & ((1u << (r - l + 1)) - 1));
+			return r - __lg(right_mask & ((1u << (r - l + 1)) - 1));
         }
 
-        uint32_t right_idx  = r - __lg(m[r]);
-        uint32_t left_idx   = l + B - 1 - __lg(m[l + B - 1]);
-        auto left_val       = c[l + B - 1];
-        auto right_val      = c[r];
-        // Maybe we can store pairs instead of m, c arrays, 4 -> 2 memory accesses may be better
+        auto [left_val, left_mask] = val_mask[l + B - 1];
+        uint32_t right_idx  = r - __lg(right_mask);
+        uint32_t left_idx   = l + B - 1 - __lg(left_mask);
+
         uint32_t k_idx = right_idx;
         auto k_val = right_val;
         if (left_val <= right_val) {
@@ -259,8 +250,8 @@ struct RMQ_Alstrup {
         }
         l = (l + B - 1) / B, r = r / B - 1;
         if (l <= r) {
-            // TODO change this to work on pairs of val index, then we can return just value
-            auto inner_idx = s_map[s.get(l, r)];
+            // RMQ works on pairs {value, index}. It's proven to be faster and easier to implement that way.
+            auto inner_idx = s.get(l, r).second;
             if (a[inner_idx] < k_val || (a[inner_idx] == k_val && inner_idx <= k_idx)) {
                 k_idx = inner_idx;
             }
