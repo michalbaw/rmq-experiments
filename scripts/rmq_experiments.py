@@ -10,7 +10,7 @@ import shutil
 import random
 
 num_query=10000
-reference="RMQ_SDSL_SCT"
+reference="RMQ_SDSL_REC"
 
 min_length=6
 max_length=8
@@ -38,6 +38,8 @@ def create_sequence(n,a,b,f):
         seq_t = 2
     if seq_type == 'worst_case':
         seq_t = 3
+    if seq_type == 'random_walk':
+        seq_t = 4
     return exe(['./generators/gen_sequence.o',
          '-n', str(n),
          '-a', str(a),

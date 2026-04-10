@@ -10,7 +10,6 @@ using namespace std;
 #define fwd(i, a, n) for (int i = (a); i < (n); i++)
 #define rep(i, n) fwd(i, 0, n)
 #define sz(X) int(ssize(X))
-#define pb push_back
 #define eb emplace_back
 using pii = pair<int, int>; using vi = vector<int>;
 using ll = long long; using ld = long double;
@@ -22,6 +21,7 @@ struct SparseTable {
     vector<vector<uint8_t>> st;
     uint32_t num_blocks;
     uint32_t max_level;
+    uint32_t min_idx = 0;
 
     SparseTable() = default;
 
@@ -88,14 +88,18 @@ struct SparseTable {
                 uint32_t abs_left = i + offset_left;
                 uint32_t abs_right = i + half_range + offset_right;
 
-                uint32_t winning_offset = (data[abs_left] <= data[abs_right]) ? offset_left : (half_range + offset_right);
+                uint32_t winning_offset = (data[abs_left] <= data[abs_right]) ? offset_left : (half_range + offset_right); 
                 write_bits(st[k], i * k, k, winning_offset);
             }
+        }
+        for (uint32_t idx = 0; idx < data.size(); ++idx) {
+            if (data[idx] < data[min_idx]) min_idx = idx;
         }
     }
 
     uint64_t get(uint32_t s, uint32_t e) const {
         if (s >= e) return 0;
+        if (s <= min_idx && min_idx < e) {return min_idx + indices[min_idx];}
         uint32_t len = e - s;
         uint32_t k = log2_floor(len);
         uint32_t abs_left = s;
@@ -106,7 +110,16 @@ struct SparseTable {
             abs_right += read_bits(st[k], (e - (1 << k)) * k, k);
         }
 
-        uint32_t argmin_block = (data[abs_left] <= data[abs_right]) ? abs_left : abs_right;
+        uint32_t argmin_block;
+        if (abs_right == abs_left) {
+            argmin_block = abs_right;
+        } else if (abs_right < s + len) {
+            argmin_block = abs_left;
+        } else if (e - len < abs_left) {
+            argmin_block = abs_right;
+        } else {
+            argmin_block = (data[abs_left] <= data[abs_right]) ? abs_left : abs_right;
+        }
         return (static_cast<uint64_t>(argmin_block) << block_bit_len) + indices[argmin_block];
     }
 };
