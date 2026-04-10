@@ -186,28 +186,41 @@ struct RMQF {
 
 template<class T>
 struct SparseTableRMQ {
-	vector<vector<T> > s;
-	SparseTableRMQ(vector<T> a = {}) : s(1, a) {
+	vector<vector<uint32_t>> s;
+    vector<T> a;
+	SparseTableRMQ(vector<T> a = {}) : s(1), a(a) {
 		if (!sz(a)) return;
+        vector<uint32_t> v;
 		rep(d, __lg(sz(a))) {
 			s.eb(sz(a) - (1 << d) * 2 + 1);
-			rep(j, sz(s[d + 1]))
-				s[d + 1][j] = min(s[d][j], s[d][j + (1 << d)]);
+			rep(j, sz(s[d + 1])) {
+                uint32_t min_idx_left = s[d][j], min_idx_right = s[d][j + (1 << d)];
+                if (a[min_idx_left] < a[min_idx_right]) {
+                    s[d + 1][j] = min_idx_left;
+                } else {
+                    s[d + 1][j] = min_idx_right;
+                }
+            }
 		}
 	}
-	T get(int l, int r) {
-		int d = __lg(r - l + 1);
-		return min(s[d][l], s[d][r - (1 << d) + 1]);
-	}
+    uint32_t get(int l, int r) {
+        int d = __lg(r - l + 1);
+        if (d == 0) return l;
+        uint32_t min_idx_left = s[d][l], min_idx_right = s[d][r - (1 << d) + 1];
+        if (a[min_idx_left] < a[min_idx_right]) {
+            return min_idx_left;
+        }
+        return min_idx_right;
+    }
 };
 
 template<class T>
-struct RMQ_Alstrup {
+struct RMQ_Alstrup_Return_Value {
 	static constexpr int B = 32; // not larger!
 	SparseTableRMQ<T> s;
 	vector<uint32_t> m;
 	vector<T> a, c;
-	RMQ_Alstrup(vector<T> A = {}) : m(sz(A)), a(A), c(sz(A)) {
+	RMQ_Alstrup_Return_Value(vector<T> A = {}) : m(sz(A)), a(A), c(sz(A)) {
 		vector<T> b(sz(a) / B + 1);
 		uint32_t mi = 0;
 		rep(i, sz(a)) {
@@ -219,13 +232,33 @@ struct RMQ_Alstrup {
 		}
 		s = SparseTableRMQ(b);
 	}
-	T get(int l, int r) {
-		if (r - l + 1 < B)
-			return a[r - __lg(m[r] & ((1u << (r - l + 1)) - 1))];
+	uint32_t get(int l, int r) {
+		if (r - l + 1 < B) {
+			return r - __lg(m[r] & ((1u << (r - l + 1)) - 1));
+        }
+
 		T k = min(c[r], c[l + B - 1]);
 		l = (l + B - 1) / B, r = r / B - 1;
 		if (l <= r) k = min(k, s.get(l, r));
 		return k; }
+};
+
+template<typename T>
+vector<pair<T, size_t>> indexed_vec(const vector<T>& v) {
+    vector<pair<T, size_t>> ret(v.size());
+    for (int i = 0; i < v.size(); ++i) {
+        ret[i] = {v[i], i};
+    }
+    return ret;
+}
+template<class T>
+struct RMQ_Alstrup {
+	RMQ_Alstrup_Return_Value<pair<T, size_t>> rmq_value;
+ 	RMQ_Alstrup(vector<T> A = {}) : rmq_value{indexed_vec(A)} {
+	}
+	size_t get(int l, int r) {
+        return rmq_value.get(l, r).second;
+    }
 };
 
 #endif
