@@ -190,12 +190,14 @@ struct SparseTableRMQ {
     vector<T> a;
 	SparseTableRMQ(vector<T> a = {}) : s(1), a(a) {
 		if (!sz(a)) return;
+        s[0].resize(sz(a));
+        for (int i = 0; i < sz(a); ++i) s[0][i] = i;
         vector<uint32_t> v;
 		rep(d, __lg(sz(a))) {
 			s.eb(sz(a) - (1 << d) * 2 + 1);
 			rep(j, sz(s[d + 1])) {
                 uint32_t min_idx_left = s[d][j], min_idx_right = s[d][j + (1 << d)];
-                if (a[min_idx_left] < a[min_idx_right]) {
+                if (a[min_idx_left] <= a[min_idx_right]) {
                     s[d + 1][j] = min_idx_left;
                 } else {
                     s[d + 1][j] = min_idx_right;
@@ -207,7 +209,7 @@ struct SparseTableRMQ {
         int d = __lg(r - l + 1);
         if (d == 0) return l;
         uint32_t min_idx_left = s[d][l], min_idx_right = s[d][r - (1 << d) + 1];
-        if (a[min_idx_left] < a[min_idx_right]) {
+        if (a[min_idx_left] <= a[min_idx_right]) {
             return min_idx_left;
         }
         return min_idx_right;
@@ -215,50 +217,84 @@ struct SparseTableRMQ {
 };
 
 template<class T>
-struct RMQ_Alstrup_Return_Value {
+struct RMQ_Alstrup {
 	static constexpr int B = 32; // not larger!
 	SparseTableRMQ<T> s;
+    vector<uint32_t> s_map;
 	vector<uint32_t> m;
 	vector<T> a, c;
-	RMQ_Alstrup_Return_Value(vector<T> A = {}) : m(sz(A)), a(A), c(sz(A)) {
-		vector<T> b(sz(a) / B + 1);
+    vector<uint32_t> c_idx;
+	RMQ_Alstrup(vector<T> A = {}) : m(sz(A)), a(A), c(sz(A)), c_idx(sz(A)) {
+		int nb = (sz(a) + B - 1) / B;
+        // block minimums
+        vector<T> b(nb);
+        // sparse table index mapping
+        s_map.resize(nb);
+        // monotone queue
 		uint32_t mi = 0;
 		rep(i, sz(a)) {
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
+            // update block minimum and block minimum index
+            if (i % B == 0 || a[i] < b[i / B]) {
+                b[i / B]    = a[i];
+                s_map[i / B] = i;
+            }
+            // move queue 1 left
 			mi <<= 1;
+            // pop all values larger then the current one from the queue
 			while (mi && a[i] < a[i - __builtin_ctz(mi)])
 				mi ^= (1u << __builtin_ctz(mi));
-			m[i] = mi ^= 1; c[i] = a[i - __lg(m[i])];
+			// add current value to queue
+            m[i] = mi ^= 1;
+            // calculate smallest value in the current 32-block
+            c[i] = a[i - __lg(m[i])];
+            // remember the index of the smallesst value
+            c_idx[i] = i - __lg(m[i]);
 		}
+        // recursibly construct ST
 		s = SparseTableRMQ(b);
 	}
 	uint32_t get(int l, int r) {
-		if (r - l + 1 < B) {
+		// if the interval is small we can use montone queues
+        if (r - l + 1 < B) {
 			return r - __lg(m[r] & ((1u << (r - l + 1)) - 1));
         }
 
-		T k = min(c[r], c[l + B - 1]);
-		l = (l + B - 1) / B, r = r / B - 1;
-		if (l <= r) k = min(k, s.get(l, r));
-		return k; }
+        uint32_t right_idx  = c_idx[r];
+        uint32_t left_idx   = c_idx[l + B - 1];
+        auto left_val       = c[l + B - 1];
+        auto right_val      = c[r];
+        uint32_t k_idx = right_idx;
+        auto k_val = right_val;
+        if (left_val <= right_val) {
+            k_idx = left_idx;
+            k_val = left_val;
+        }
+        l = (l + B - 1) / B, r = r / B - 1;
+        if (l <= r) {
+            auto inner_idx = s_map[s.get(l, r)];
+            if (a[inner_idx] < k_val || (a[inner_idx] == k_val && inner_idx <= k_idx)) {
+                k_idx = inner_idx;
+            }
+        }
+		return k_idx; }
 };
 
-template<typename T>
-vector<pair<T, size_t>> indexed_vec(const vector<T>& v) {
-    vector<pair<T, size_t>> ret(v.size());
-    for (int i = 0; i < v.size(); ++i) {
-        ret[i] = {v[i], i};
-    }
-    return ret;
-}
-template<class T>
-struct RMQ_Alstrup {
-	RMQ_Alstrup_Return_Value<pair<T, size_t>> rmq_value;
- 	RMQ_Alstrup(vector<T> A = {}) : rmq_value{indexed_vec(A)} {
-	}
-	size_t get(int l, int r) {
-        return rmq_value.get(l, r).second;
-    }
-};
+// template<typename T>
+// vector<pair<T, size_t>> indexed_vec(const vector<T>& v) {
+//     vector<pair<T, size_t>> ret(v.size());
+//     for (int i = 0; i < v.size(); ++i) {
+//         ret[i] = {v[i], i};
+//     }
+//     return ret;
+// }
+// template<class T>
+// struct RMQ_Alstrup {
+// 	RMQ_Alstrup_Return_Value<pair<T, size_t>> rmq_value;
+//  	RMQ_Alstrup(vector<T> A = {}) : rmq_value{indexed_vec(A)} {
+// 	}
+// 	size_t get(int l, int r) {
+//         return rmq_value.get(l, r).second;
+//     }
+// };
 
 #endif
