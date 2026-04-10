@@ -186,33 +186,23 @@ struct RMQF {
 
 template<class T>
 struct SparseTableRMQ {
-	vector<vector<uint32_t>> s;
-    vector<T> a;
-	SparseTableRMQ(vector<T> a = {}) : s(1), a(a) {
+	vector<vector<pair<T, uint32_t>>> s;
+	SparseTableRMQ(vector<T> a = {}) : s(1) {
 		if (!sz(a)) return;
         s[0].resize(sz(a));
-        for (int i = 0; i < sz(a); ++i) s[0][i] = i;
-        vector<uint32_t> v;
+        for (int i = 0; i < sz(a); ++i) s[0][i] = {a[i], i};
+
 		rep(d, __lg(sz(a))) {
 			s.eb(sz(a) - (1 << d) * 2 + 1);
 			rep(j, sz(s[d + 1])) {
-                uint32_t min_idx_left = s[d][j], min_idx_right = s[d][j + (1 << d)];
-                if (a[min_idx_left] <= a[min_idx_right]) {
-                    s[d + 1][j] = min_idx_left;
-                } else {
-                    s[d + 1][j] = min_idx_right;
-                }
+                s[d+1][j] = min(s[d][j], s[d][j + (1 << d)]);
             }
 		}
 	}
     uint32_t get(int l, int r) {
         int d = __lg(r - l + 1);
         if (d == 0) return l;
-        uint32_t min_idx_left = s[d][l], min_idx_right = s[d][r - (1 << d) + 1];
-        if (a[min_idx_left] <= a[min_idx_right]) {
-            return min_idx_left;
-        }
-        return min_idx_right;
+        return min(s[d][l], s[d][r - (1 << d) + 1]).second;
     }
 };
 
@@ -223,8 +213,7 @@ struct RMQ_Alstrup {
     vector<uint32_t> s_map;
 	vector<uint32_t> m;
 	vector<T> a, c;
-    vector<uint32_t> c_idx;
-	RMQ_Alstrup(vector<T> A = {}) : m(sz(A)), a(A), c(sz(A)), c_idx(sz(A)) {
+	RMQ_Alstrup(vector<T> A = {}) : m(sz(A)), a(A), c(sz(A)) {
 		int nb = (sz(a) + B - 1) / B;
         // block minimums
         vector<T> b(nb);
@@ -247,8 +236,6 @@ struct RMQ_Alstrup {
             m[i] = mi ^= 1;
             // calculate smallest value in the current 32-block
             c[i] = a[i - __lg(m[i])];
-            // remember the index of the smallesst value
-            c_idx[i] = i - __lg(m[i]);
 		}
         // recursibly construct ST
 		s = SparseTableRMQ(b);
@@ -259,10 +246,11 @@ struct RMQ_Alstrup {
 			return r - __lg(m[r] & ((1u << (r - l + 1)) - 1));
         }
 
-        uint32_t right_idx  = c_idx[r];
-        uint32_t left_idx   = c_idx[l + B - 1];
+        uint32_t right_idx  = r - __lg(m[r]);
+        uint32_t left_idx   = l + B - 1 - __lg(m[l + B - 1]);
         auto left_val       = c[l + B - 1];
         auto right_val      = c[r];
+        // Maybe we can store pairs instead of m, c arrays, 4 -> 2 memory accesses may be better
         uint32_t k_idx = right_idx;
         auto k_val = right_val;
         if (left_val <= right_val) {
@@ -271,6 +259,7 @@ struct RMQ_Alstrup {
         }
         l = (l + B - 1) / B, r = r / B - 1;
         if (l <= r) {
+            // TODO change this to work on pairs of val index, then we can return just value
             auto inner_idx = s_map[s.get(l, r)];
             if (a[inner_idx] < k_val || (a[inner_idx] == k_val && inner_idx <= k_idx)) {
                 k_idx = inner_idx;
