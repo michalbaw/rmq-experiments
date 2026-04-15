@@ -201,11 +201,11 @@ struct SparseTableRMQ {
 	}
 };
 
-template<class T>
+template<class T, typename mask_type>
 struct RMQ_Alstrup {
-static constexpr int B = 32; // not larger!
+    static constexpr int B = 8 * sizeof(mask_type); // not larger!
     using indexed_pair = pair<T, uint32_t>;
-    using val_idx_mask_t = tuple<T, uint32_t, uint32_t>;
+    using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
 	vector<indexed_pair> a;
@@ -216,15 +216,20 @@ static constexpr int B = 32; // not larger!
         // preprocess block minimum values
 		vector<indexed_pair> b(sz(a) / B + 1);
 		// monotone queue
-		uint32_t mi = 0;
+		mask_type mi = 0;
 		rep(i, sz(a)) {
 			// calculate block minimum value
 			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
 			// shift queue one left
 			mi <<= 1;
 			// need to pop all values larger then the current one
-			while (mi && a[i] < a[i - __builtin_ctz(mi)])
-				mi ^= (1u << __builtin_ctz(mi));
+			if constexpr (sizeof(mask_type) > 4) {
+                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
+                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+            } else {
+                while (mi && a[i] < a[i - __builtin_ctz(mi)])
+                    mi ^= (mask_type(1) << __builtin_ctz(mi));
+            }
 			// add the rightmost element to the queue
             mi ^= 1;
             auto [val, idx] = a[i - __lg(mi)];
@@ -237,7 +242,7 @@ static constexpr int B = 32; // not larger!
 		// if we are in the range of monotone queues, use them
 		auto [rval, ridx, rmask] = val_idx_mask[r];
         if (r - l + 1 < B) { 
-            return r - __lg(rmask & ((1u << (r - l + 1)) - 1));
+            return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
 		}
         auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
 		// Take the min value to be min of right end 32-block and left end 32-block
@@ -251,23 +256,5 @@ static constexpr int B = 32; // not larger!
 		return k.second;
     }
 };
-
-// template<typename T>
-// vector<pair<T, size_t>> indexed_vec(const vector<T>& v) {
-//     vector<pair<T, size_t>> ret(v.size());
-//     for (int i = 0; i < v.size(); ++i) {
-//         ret[i] = {v[i], i};
-//     }
-//     return ret;
-// }
-// template<class T>
-// struct RMQ_Alstrup {
-// 	RMQ_Alstrup_Return_Value<pair<T, size_t>> rmq_value;
-//  	RMQ_Alstrup(vector<T> A = {}) : rmq_value{indexed_vec(A)} {
-// 	}
-// 	size_t get(int l, int r) {
-//         return rmq_value.get(l, r).second;
-//     }
-// };
 
 #endif

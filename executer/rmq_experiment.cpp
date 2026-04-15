@@ -194,9 +194,9 @@ private:
     cache_miss_stats cache_stats;
 };
 
-
+template<typename mask_type>
 void executeRMQAlstrupDefault(long int *A, size_t N, vector<vector<query>>& qry) {
-    string algo = "RMQ_ALSTRUP";
+    string algo = "RMQ_ALSTRUP"s + std::to_string(8 * sizeof(mask_type));
     vector<query_stats> q_stats(qry.size(),query_stats(algo));
     construction_stats c_stats(algo);
     cache_miss_stats cache_stats(N,algo);
@@ -205,7 +205,7 @@ void executeRMQAlstrupDefault(long int *A, size_t N, vector<vector<query>>& qry)
     vector<long int> vA(N);
     for (int i = 0; i < N; ++i) vA[i] = A[i];
     s = time();
-    RMQ_Alstrup<long int> rmq(vA);
+    RMQ_Alstrup<long int, mask_type> rmq(vA);
     e = time();
     
     c_stats.addConstructionResult(N,milliseconds(),
@@ -591,7 +591,13 @@ int main(int argc, char *argv[]) {
         // } 
 
         {
-            executeRMQAlstrupDefault(B,N,qv);
+            executeRMQAlstrupDefault<uint16_t>(B,N,qv);
+        }
+        {
+            executeRMQAlstrupDefault<uint32_t>(B,N,qv);
+        }
+        {
+            executeRMQAlstrupDefault<uint64_t>(B,N,qv);
         }
 
         // {

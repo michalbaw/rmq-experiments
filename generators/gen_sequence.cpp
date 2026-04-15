@@ -88,7 +88,7 @@ void writePseudoSortedIncreasingSequence(config& con, std::ofstream& os) {
     }
 }
 
-void writeRandomWalkSequence(config& con, std::ofstream& os, float pr_up = 0.66) {
+void writeRandomWalkSequence(config& con, std::ofstream& os, float pr_up = 0.51) {
     printf("Starting generating Random Walk Sequence with A[i+1] = %f * (A[i] + 1) + (1 - %f) * (A[i] - 1)", pr_up, pr_up);
     std::uniform_real_distribution<float> dis(0, 1);
     auto value_now = con.N;
