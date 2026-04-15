@@ -212,13 +212,14 @@ void executeRMQAlstrupDefault(long int *A, size_t N, vector<vector<query>>& qry)
                                   8.0*(static_cast<double>(0)/static_cast<double>(N)));
     c_stats.printConstructionStats();
     
+    ofstream out("benchmark/"+algo+".txt");
     for(int i = 0; i < qry.size(); ++i) {
         for(int j = 0; j < qry[i].size(); ++j) {
             ll i1 = qry[i][j].first, i2 = qry[i][j].second;
             volatile auto res = rmq.get(i1,i2);
         }
     }
-
+    
     for(int i = 0; i < qry.size(); ++i) {
         q_stats[i].N = N;
         
@@ -237,7 +238,8 @@ void executeRMQAlstrupDefault(long int *A, size_t N, vector<vector<query>>& qry)
             s = time();
             volatile auto res = rmq.get(i1,i2);
             e = time();
-          
+            
+            out << res << "\n";
 	       q_stats[i].addQueryResult(qry[i][j],microseconds());
         }
         
@@ -557,6 +559,16 @@ int main(int argc, char *argv[]) {
         //     RMQExperiment<rmq_succinct_sct<>> rmq(algo,&A,qv);
         // } 
         
+        // {
+        //     string algo = "RMQ_SDSL_FAST_OPTIMIZED_ST_QUERY";
+        //     RMQExperiment<RMQ_SDSL_Fast_Optimized_ST_Query<0, 32, 32, 0>> rmq(algo, &A, qv);
+        // }
+
+        // {
+        //     string algo = "RMQ_SDSL_FAST_OPTIMIZED_ST_QUERY_ST";
+        //     RMQExperiment<RMQ_SDSL_Fast_Optimized_ST_Query<2048, 32, 32, 0>> rmq(algo, &A, qv);
+        // }
+
         {
             string algo = "RMQ_SDSL_FAST";
             RMQExperiment<RMQ_SDSL_Fast<0, 32, 32, 0>> rmq(algo, &A, qv);
@@ -582,9 +594,9 @@ int main(int argc, char *argv[]) {
             executeRMQAlstrupDefault(B,N,qv);
         }
 
-        {
-            executeRMQAlstrupModifiedSparseTable(B,N,qv);
-        }
+        // {
+        //     executeRMQAlstrupModifiedSparseTable(B,N,qv);
+        // }
         
         if(N < std::numeric_limits<int>::max()) {
             std::vector<long long> C(N);

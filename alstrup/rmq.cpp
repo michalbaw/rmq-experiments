@@ -237,10 +237,10 @@ static constexpr int B = 32; // not larger!
 		// if we are in the range of monotone queues, use them
 		auto [rval, ridx, rmask] = val_idx_mask[r];
         if (r - l + 1 < B) { 
-			return r - __lg(rmask & ((1u << (r - l + 1)) - 1));
+            return r - __lg(rmask & ((1u << (r - l + 1)) - 1));
 		}
+        auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
 		// Take the min value to be min of right end 32-block and left end 32-block
-		auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
         auto k = min(l_val_idx, r_val_idx);
