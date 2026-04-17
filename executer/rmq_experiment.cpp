@@ -1,4 +1,4 @@
-#include "../alstrup/rmq.cpp"
+#include "../alstrup/rmq.hpp"
 #include <sdsl/rmq_support.hpp> // include header for range minimum queries
 #include "sdsl/memory_management.hpp"
 #include <algorithm>
