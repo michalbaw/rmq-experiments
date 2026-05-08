@@ -194,9 +194,23 @@ private:
     cache_miss_stats cache_stats;
 };
 
-template<typename mask_type>
+
+template <size_t N>
+struct FixedString {
+    char data[N];
+
+    constexpr FixedString(const char (&str)[N]) {
+        std::copy_n(str, N, data);
+    }
+};
+
+template <size_t N>
+FixedString(const char (&)[N]) -> FixedString<N>;
+
+template<typename mask_type, template<typename, typename> typename rmq_class, FixedString rmq_name>
 void executeRMQAlstrupDefault(long int *A, size_t N, vector<vector<query>>& qry) {
-    string algo = "RMQ_ALSTRUP"s + std::to_string(8 * sizeof(mask_type));
+    // string algo = "RMQ_ALSTRUP"s + std::to_string(8 * sizeof(mask_type));
+    string algo = rmq_name.data;
     vector<query_stats> q_stats(qry.size(),query_stats(algo));
     construction_stats c_stats(algo);
     cache_miss_stats cache_stats(N,algo);
@@ -205,7 +219,7 @@ void executeRMQAlstrupDefault(long int *A, size_t N, vector<vector<query>>& qry)
     vector<long int> vA(N);
     for (int i = 0; i < N; ++i) vA[i] = A[i];
     s = time();
-    RMQ_Alstrup<long int, mask_type> rmq(vA);
+    rmq_class<long int, mask_type> rmq(vA);
     e = time();
     
     c_stats.addConstructionResult(N,milliseconds(),
@@ -590,16 +604,24 @@ int main(int argc, char *argv[]) {
         //     executeRMQFerrada(B,N,qv);
         // } 
 
+        // {
+        //     executeRMQAlstrupDefault<uint16_t>(B,N,qv);
+        // }
+        // {
+        //     executeRMQAlstrupDefault<uint32_t>(B,N,qv);
+        // {
+        //     executeRMQAlstrupDefault<uint64_t>(B,N,qv);
+        // }
         {
-            executeRMQAlstrupDefault<uint16_t>(B,N,qv);
+            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup, "Alstrup_LRS">(B,N,qv);
+            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_LR, "Alstrup_LR">(B,N,qv);
+            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_LS, "Alstrup_LS">(B,N,qv);
+            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_RS, "Alstrup_RS">(B,N,qv);
+            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_L, "Alstrup_L">(B,N,qv);
+            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_R, "Alstrup_R">(B,N,qv);
+            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_S, "Alstrup_S">(B,N,qv);
         }
-        {
-            executeRMQAlstrupDefault<uint32_t>(B,N,qv);
-        }
-        {
-            executeRMQAlstrupDefault<uint64_t>(B,N,qv);
-        }
-
+            
         // {
         //     executeRMQAlstrupModifiedSparseTable(B,N,qv);
         // }
