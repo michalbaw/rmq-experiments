@@ -360,7 +360,7 @@ struct RMQ_Alstrup_RS {
         if (r - l + 1 < B) { 
             return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
 		}
-        auto [lval, lidx, lmask] = val_idx_mask_t{123, 456, 789};
+        auto [lval, lidx, lmask] = val_idx_mask_t{l, (l + r) / 2, 121};
 		// Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
@@ -412,7 +412,7 @@ struct RMQ_Alstrup_LS {
 	}
 	uint32_t get(int l, int r) {
 		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask_t{123, 456, 789};
+		auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
         if (r - l + 1 < B) { 
             // return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
             return 0;
@@ -524,12 +524,12 @@ struct RMQ_Alstrup_S {
 	}
 	uint32_t get(int l, int r) {
 		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask_t{123, 456, 789};
+		auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
         if (r - l + 1 < B) { 
             // return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
             return 0;
 		}
-        auto [lval, lidx, lmask] = val_idx_mask_t{100, 234, 567};
+        auto [lval, lidx, lmask] = val_idx_mask_t{l, (l + r) / 2, 121};
 		// Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
@@ -638,7 +638,7 @@ struct RMQ_Alstrup_L {
 	}
 	uint32_t get(int l, int r) {
 		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask_t{123, 456, 789};
+		auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
         if (r - l + 1 < B) { 
             return 0;
 		}
