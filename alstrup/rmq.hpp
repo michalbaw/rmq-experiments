@@ -186,19 +186,19 @@ struct RMQF {
 
 template<class T>
 struct SparseTableRMQ {
-	vector<vector<T> > s;
-	SparseTableRMQ(vector<T> a = {}) : s(1, a) {
-		if (!sz(a)) return;
-		rep(d, __lg(sz(a))) {
-			s.eb(sz(a) - (1 << d) * 2 + 1);
-			rep(j, sz(s[d + 1]))
-				s[d + 1][j] = min(s[d][j], s[d][j + (1 << d)]);
-		}
-	}
-	T get(int l, int r) {
-		int d = __lg(r - l + 1);
-		return min(s[d][l], s[d][r - (1 << d) + 1]);
-	}
+    vector<vector<T> > s;
+    SparseTableRMQ(vector<T> a = {}) : s(1, a) {
+        if (!sz(a)) return;
+        rep(d, __lg(sz(a))) {
+            s.eb(sz(a) - (1 << d) * 2 + 1);
+            rep(j, sz(s[d + 1]))
+                s[d + 1][j] = min(s[d][j], s[d][j + (1 << d)]);
+        }
+    }
+    T get(int l, int r) {
+        int d = __lg(r - l + 1);
+        return min(s[d][l], s[d][r - (1 << d) + 1]);
+    }
 };
 
 template<class T, typename mask_type>
@@ -208,54 +208,59 @@ struct RMQ_Alstrup {
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
-	vector<indexed_pair> a;
-	RMQ_Alstrup(vector<T> A = {}) : a(sz(A)), val_idx_mask(sz(A)) {
-		rep(i, sz(a)) {
-            a[i] = indexed_pair{A[i], i};
-        }
+    RMQ_Alstrup(vector<T> A = {}) : val_idx_mask(sz(A)) {
         // preprocess block minimum values
-		vector<indexed_pair> b(sz(a) / B + 1);
-		// monotone queue
-		mask_type mi = 0;
-		rep(i, sz(a)) {
-			// calculate block minimum value
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
-			// shift queue one left
-			mi <<= 1;
-			// need to pop all values larger then the current one
-			if constexpr (sizeof(mask_type) > 4) {
-                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+        vector<indexed_pair> b(sz(A) / B + 1);
+        // monotone queue
+        mask_type mi = 0;
+        rep(i, sz(A)) {
+            auto ai = indexed_pair{A[i], i};
+            // calculate block minimum value
+            b[i / B] = (i % B ? min(b[i / B], ai) : ai);
+            // shift queue one left
+            mi <<= 1;
+            // need to pop all values larger then the current one
+            if constexpr (sizeof(mask_type) > 4) {
+                while (mi) {
+                    int tz = __builtin_ctzll(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             } else {
-                while (mi && a[i] < a[i - __builtin_ctz(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctz(mi));
+                while (mi) {
+                    int tz = __builtin_ctz(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             }
-			// add the rightmost element to the queue
+            // add the rightmost element to the queue
             mi ^= 1;
-            auto [val, idx] = a[i - __lg(mi)];
-			val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
-		}
-		// recursivly construct RMQ on blocks
-		s = SparseTableRMQ(b);
-	}
-	uint32_t get(int l, int r) {
-		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask[r];
+            int lz = __lg(mi);
+            auto [val, idx] = indexed_pair{A[i - lz], i - lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+        // recursivly construct RMQ on blocks
+        s = SparseTableRMQ(b);
+    }
+    uint32_t get(int l, int r) {
+        // if we are in the range of monotone queues, use them
+        auto [rval, ridx, rmask] = val_idx_mask[r];
         if (r - l + 1 < B) { 
             return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
-		}
+        }
         auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
-		// Take the min value to be min of right end 32-block and left end 32-block
+        // Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
         auto k = min(l_val_idx, r_val_idx);
-		// compute block indicies to query recusively
-		l = (l + B - 1) / B, r = r / B - 1;
-		// only query if necessary
-		if (l <= r) k = min(k, s.get(l, r));
-		return k.second;
+        // compute block indicies to query recusively
+        l = (l + B - 1) / B, r = r / B - 1;
+        // only query if necessary
+        if (l <= r) k = min(k, s.get(l, r));
+        return k.second;
     }
 };
+
 template<class T, typename mask_type>
 struct RMQ_Alstrup_Builtins_Cached {
     static constexpr int B = 8 * sizeof(mask_type); // not larger!
@@ -263,60 +268,65 @@ struct RMQ_Alstrup_Builtins_Cached {
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
-	vector<indexed_pair> a;
     uint16_t ctz[1 << 16];
     uint16_t lg[1 << 16];
-	RMQ_Alstrup_Builtins_Cached(vector<T> A = {}) : a(sz(A)), val_idx_mask(sz(A)) {
-		for (uint32_t i = 0; i < (1 << 16); i += 1) {
+    RMQ_Alstrup_Builtins_Cached(vector<T> A = {}) : val_idx_mask(sz(A)) {
+        for (uint32_t i = 0; i < (1 << 16); i += 1) {
             ctz[i] = __builtin_ctz(i);
             lg[i] = __lg(i);
         }
-        rep(i, sz(a)) {
-            a[i] = indexed_pair{A[i], i};
-        }
         // preprocess block minimum values
-		vector<indexed_pair> b(sz(a) / B + 1);
-		// monotone queue
-		mask_type mi = 0;
-		rep(i, sz(a)) {
-			// calculate block minimum value
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
-			// shift queue one left
-			mi <<= 1;
-			// need to pop all values larger then the current one
-			if constexpr (sizeof(mask_type) > 4) {
-                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+        vector<indexed_pair> b(sz(A) / B + 1);
+        // monotone queue
+        mask_type mi = 0;
+        rep(i, sz(A)) {
+            auto ai = indexed_pair{A[i], i};
+            // calculate block minimum value
+            b[i / B] = (i % B ? min(b[i / B], ai) : ai);
+            // shift queue one left
+            mi <<= 1;
+            // need to pop all values larger then the current one
+            if constexpr (sizeof(mask_type) > 4) {
+                while (mi) {
+                    int tz = __builtin_ctzll(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             } else {
-                while (mi && a[i] < a[i - ctz[mi]])
-                    mi ^= (mask_type(1) << ctz[mi]);
+                while (mi) {
+                    int tz = ctz[mi];
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             }
-			// add the rightmost element to the queue
+            // add the rightmost element to the queue
             mi ^= 1;
-            auto [val, idx] = a[i - lg[mi]];
-			val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
-		}
-		// recursivly construct RMQ on blocks
-		s = SparseTableRMQ(b);
-	}
-	uint32_t get(int l, int r) {
-		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask[r];
+            int lz = lg[mi];
+            auto [val, idx] = indexed_pair{A[i - lz], i - lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+        // recursivly construct RMQ on blocks
+        s = SparseTableRMQ(b);
+    }
+    uint32_t get(int l, int r) {
+        // if we are in the range of monotone queues, use them
+        auto [rval, ridx, rmask] = val_idx_mask[r];
         if (r - l + 1 < B) { 
             return r - lg[rmask & ((mask_type(1) << (r - l + 1)) - 1)];
-		}
+        }
         auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
-		// Take the min value to be min of right end 32-block and left end 32-block
+        // Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
         auto k = min(l_val_idx, r_val_idx);
-		// compute block indicies to query recusively
-		l = (l + B - 1) / B, r = r / B - 1;
-		// only query if necessary
-		if (l <= r) k = min(k, s.get(l, r));
-		return k.second;
+        // compute block indicies to query recusively
+        l = (l + B - 1) / B, r = r / B - 1;
+        // only query if necessary
+        if (l <= r) k = min(k, s.get(l, r));
+        return k.second;
     }
 };
+
 template<class T, typename mask_type>
 struct RMQ_Alstrup_RS {
     static constexpr int B = 8 * sizeof(mask_type); // not larger!
@@ -324,52 +334,56 @@ struct RMQ_Alstrup_RS {
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
-	vector<indexed_pair> a;
-	RMQ_Alstrup_RS(vector<T> A = {}) : a(sz(A)), val_idx_mask(sz(A)) {
-		rep(i, sz(a)) {
-            a[i] = indexed_pair{A[i], i};
-        }
+    RMQ_Alstrup_RS(vector<T> A = {}) : val_idx_mask(sz(A)) {
         // preprocess block minimum values
-		vector<indexed_pair> b(sz(a) / B + 1);
-		// monotone queue
-		mask_type mi = 0;
-		rep(i, sz(a)) {
-			// calculate block minimum value
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
-			// shift queue one left
-			mi <<= 1;
-			// need to pop all values larger then the current one
-			if constexpr (sizeof(mask_type) > 4) {
-                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+        vector<indexed_pair> b(sz(A) / B + 1);
+        // monotone queue
+        mask_type mi = 0;
+        rep(i, sz(A)) {
+            auto ai = indexed_pair{A[i], i};
+            // calculate block minimum value
+            b[i / B] = (i % B ? min(b[i / B], ai) : ai);
+            // shift queue one left
+            mi <<= 1;
+            // need to pop all values larger then the current one
+            if constexpr (sizeof(mask_type) > 4) {
+                while (mi) {
+                    int tz = __builtin_ctzll(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             } else {
-                while (mi && a[i] < a[i - __builtin_ctz(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctz(mi));
+                while (mi) {
+                    int tz = __builtin_ctz(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             }
-			// add the rightmost element to the queue
+            // add the rightmost element to the queue
             mi ^= 1;
-            auto [val, idx] = a[i - __lg(mi)];
-			val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
-		}
-		// recursivly construct RMQ on blocks
-		s = SparseTableRMQ(b);
-	}
-	uint32_t get(int l, int r) {
-		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask[r];
+            int lz = __lg(mi);
+            auto [val, idx] = indexed_pair{A[i - lz], i - lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+        // recursivly construct RMQ on blocks
+        s = SparseTableRMQ(b);
+    }
+    uint32_t get(int l, int r) {
+        // if we are in the range of monotone queues, use them
+        auto [rval, ridx, rmask] = val_idx_mask[r];
         if (r - l + 1 < B) { 
             return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
-		}
+        }
         auto [lval, lidx, lmask] = val_idx_mask_t{l, (l + r) / 2, 121};
-		// Take the min value to be min of right end 32-block and left end 32-block
+        // Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
         auto k = min(l_val_idx, r_val_idx);
-		// compute block indicies to query recusively
-		l = (l + B - 1) / B, r = r / B - 1;
-		// only query if necessary
-		if (l <= r) k = min(k, s.get(l, r));
-		return k.second;
+        // compute block indicies to query recusively
+        l = (l + B - 1) / B, r = r / B - 1;
+        // only query if necessary
+        if (l <= r) k = min(k, s.get(l, r));
+        return k.second;
     }
 };
 
@@ -380,55 +394,60 @@ struct RMQ_Alstrup_LS {
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
-	vector<indexed_pair> a;
-	RMQ_Alstrup_LS(vector<T> A = {}) : a(sz(A)), val_idx_mask(sz(A)) {
-		rep(i, sz(a)) {
-            a[i] = indexed_pair{A[i], i};
-        }
+    RMQ_Alstrup_LS(vector<T> A = {}) : val_idx_mask(sz(A)) {
         // preprocess block minimum values
-		vector<indexed_pair> b(sz(a) / B + 1);
-		// monotone queue
-		mask_type mi = 0;
-		rep(i, sz(a)) {
-			// calculate block minimum value
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
-			// shift queue one left
-			mi <<= 1;
-			// need to pop all values larger then the current one
-			if constexpr (sizeof(mask_type) > 4) {
-                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+        vector<indexed_pair> b(sz(A) / B + 1);
+        // monotone queue
+        mask_type mi = 0;
+        rep(i, sz(A)) {
+            auto ai = indexed_pair{A[i], i};
+            // calculate block minimum value
+            b[i / B] = (i % B ? min(b[i / B], ai) : ai);
+            // shift queue one left
+            mi <<= 1;
+            // need to pop all values larger then the current one
+            if constexpr (sizeof(mask_type) > 4) {
+                while (mi) {
+                    int tz = __builtin_ctzll(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             } else {
-                while (mi && a[i] < a[i - __builtin_ctz(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctz(mi));
+                while (mi) {
+                    int tz = __builtin_ctz(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             }
-			// add the rightmost element to the queue
+            // add the rightmost element to the queue
             mi ^= 1;
-            auto [val, idx] = a[i - __lg(mi)];
-			val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
-		}
-		// recursivly construct RMQ on blocks
-		s = SparseTableRMQ(b);
-	}
-	uint32_t get(int l, int r) {
-		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
+            int lz = __lg(mi);
+            auto [val, idx] = indexed_pair{A[i - lz], i - lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+        // recursivly construct RMQ on blocks
+        s = SparseTableRMQ(b);
+    }
+    uint32_t get(int l, int r) {
+        // if we are in the range of monotone queues, use them
+        auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
         if (r - l + 1 < B) { 
             // return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
             return 0;
         }
         auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
-		// Take the min value to be min of right end 32-block and left end 32-block
+        // Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
         auto k = min(l_val_idx, r_val_idx);
-		// compute block indicies to query recusively
-		l = (l + B - 1) / B, r = r / B - 1;
-		// only query if necessary
-		if (l <= r) k = min(k, s.get(l, r));
-		return k.second;
+        // compute block indicies to query recusively
+        l = (l + B - 1) / B, r = r / B - 1;
+        // only query if necessary
+        if (l <= r) k = min(k, s.get(l, r));
+        return k.second;
     }
 };
+
 template<class T, typename mask_type>
 struct RMQ_Alstrup_LR {
     static constexpr int B = 8 * sizeof(mask_type); // not larger!
@@ -436,52 +455,56 @@ struct RMQ_Alstrup_LR {
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
-	vector<indexed_pair> a;
-	RMQ_Alstrup_LR(vector<T> A = {}) : a(sz(A)), val_idx_mask(sz(A)) {
-		rep(i, sz(a)) {
-            a[i] = indexed_pair{A[i], i};
-        }
+    RMQ_Alstrup_LR(vector<T> A = {}) : val_idx_mask(sz(A)) {
         // preprocess block minimum values
-		vector<indexed_pair> b(sz(a) / B + 1);
-		// monotone queue
-		mask_type mi = 0;
-		rep(i, sz(a)) {
-			// calculate block minimum value
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
-			// shift queue one left
-			mi <<= 1;
-			// need to pop all values larger then the current one
-			if constexpr (sizeof(mask_type) > 4) {
-                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+        vector<indexed_pair> b(sz(A) / B + 1);
+        // monotone queue
+        mask_type mi = 0;
+        rep(i, sz(A)) {
+            auto ai = indexed_pair{A[i], i};
+            // calculate block minimum value
+            b[i / B] = (i % B ? min(b[i / B], ai) : ai);
+            // shift queue one left
+            mi <<= 1;
+            // need to pop all values larger then the current one
+            if constexpr (sizeof(mask_type) > 4) {
+                while (mi) {
+                    int tz = __builtin_ctzll(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             } else {
-                while (mi && a[i] < a[i - __builtin_ctz(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctz(mi));
+                while (mi) {
+                    int tz = __builtin_ctz(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             }
-			// add the rightmost element to the queue
+            // add the rightmost element to the queue
             mi ^= 1;
-            auto [val, idx] = a[i - __lg(mi)];
-			val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
-		}
-		// recursivly construct RMQ on blocks
-		s = SparseTableRMQ(b);
-	}
-	uint32_t get(int l, int r) {
-		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask[r];
+            int lz = __lg(mi);
+            auto [val, idx] = indexed_pair{A[i - lz], i - lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+        // recursivly construct RMQ on blocks
+        s = SparseTableRMQ(b);
+    }
+    uint32_t get(int l, int r) {
+        // if we are in the range of monotone queues, use them
+        auto [rval, ridx, rmask] = val_idx_mask[r];
         if (r - l + 1 < B) { 
             return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
-		}
+        }
         auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
-		// Take the min value to be min of right end 32-block and left end 32-block
+        // Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
         auto k = min(l_val_idx, r_val_idx);
-		// compute block indicies to query recusively
-		// l = (l + B - 1) / B, r = r / B - 1;
-		// only query if necessary
-		// if (l <= r) k = min(k, s.get(l, r));
-		return k.second;
+        // compute block indicies to query recusively
+        // l = (l + B - 1) / B, r = r / B - 1;
+        // only query if necessary
+        // if (l <= r) k = min(k, s.get(l, r));
+        return k.second;
     }
 };
 
@@ -492,53 +515,57 @@ struct RMQ_Alstrup_S {
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
-	vector<indexed_pair> a;
-	RMQ_Alstrup_S(vector<T> A = {}) : a(sz(A)), val_idx_mask(sz(A)) {
-		rep(i, sz(a)) {
-            a[i] = indexed_pair{A[i], i};
-        }
+    RMQ_Alstrup_S(vector<T> A = {}) : val_idx_mask(sz(A)) {
         // preprocess block minimum values
-		vector<indexed_pair> b(sz(a) / B + 1);
-		// monotone queue
-		mask_type mi = 0;
-		rep(i, sz(a)) {
-			// calculate block minimum value
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
-			// shift queue one left
-			mi <<= 1;
-			// need to pop all values larger then the current one
-			if constexpr (sizeof(mask_type) > 4) {
-                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+        vector<indexed_pair> b(sz(A) / B + 1);
+        // monotone queue
+        mask_type mi = 0;
+        rep(i, sz(A)) {
+            auto ai = indexed_pair{A[i], i};
+            // calculate block minimum value
+            b[i / B] = (i % B ? min(b[i / B], ai) : ai);
+            // shift queue one left
+            mi <<= 1;
+            // need to pop all values larger then the current one
+            if constexpr (sizeof(mask_type) > 4) {
+                while (mi) {
+                    int tz = __builtin_ctzll(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             } else {
-                while (mi && a[i] < a[i - __builtin_ctz(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctz(mi));
+                while (mi) {
+                    int tz = __builtin_ctz(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             }
-			// add the rightmost element to the queue
+            // add the rightmost element to the queue
             mi ^= 1;
-            auto [val, idx] = a[i - __lg(mi)];
-			val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
-		}
-		// recursivly construct RMQ on blocks
-		s = SparseTableRMQ(b);
-	}
-	uint32_t get(int l, int r) {
-		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
+            int lz = __lg(mi);
+            auto [val, idx] = indexed_pair{A[i - lz], i - lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+        // recursivly construct RMQ on blocks
+        s = SparseTableRMQ(b);
+    }
+    uint32_t get(int l, int r) {
+        // if we are in the range of monotone queues, use them
+        auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
         if (r - l + 1 < B) { 
             // return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
             return 0;
-		}
+        }
         auto [lval, lidx, lmask] = val_idx_mask_t{l, (l + r) / 2, 121};
-		// Take the min value to be min of right end 32-block and left end 32-block
+        // Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
         auto k = min(l_val_idx, r_val_idx);
-		// compute block indicies to query recusively
-		l = (l + B - 1) / B, r = r / B - 1;
-		// only query if necessary
-		if (l <= r) k = min(k, s.get(l, r));
-		return k.second;
+        // compute block indicies to query recusively
+        l = (l + B - 1) / B, r = r / B - 1;
+        // only query if necessary
+        if (l <= r) k = min(k, s.get(l, r));
+        return k.second;
     }
 };
 
@@ -549,53 +576,57 @@ struct RMQ_Alstrup_R {
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
-	vector<indexed_pair> a;
-	RMQ_Alstrup_R(vector<T> A = {}) : a(sz(A)), val_idx_mask(sz(A)) {
-		rep(i, sz(a)) {
-            a[i] = indexed_pair{A[i], i};
-        }
+    RMQ_Alstrup_R(vector<T> A = {}) : val_idx_mask(sz(A)) {
         // preprocess block minimum values
-		vector<indexed_pair> b(sz(a) / B + 1);
-		// monotone queue
-		mask_type mi = 0;
-		rep(i, sz(a)) {
-			// calculate block minimum value
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
-			// shift queue one left
-			mi <<= 1;
-			// need to pop all values larger then the current one
-			if constexpr (sizeof(mask_type) > 4) {
-                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+        vector<indexed_pair> b(sz(A) / B + 1);
+        // monotone queue
+        mask_type mi = 0;
+        rep(i, sz(A)) {
+            auto ai = indexed_pair{A[i], i};
+            // calculate block minimum value
+            b[i / B] = (i % B ? min(b[i / B], ai) : ai);
+            // shift queue one left
+            mi <<= 1;
+            // need to pop all values larger then the current one
+            if constexpr (sizeof(mask_type) > 4) {
+                while (mi) {
+                    int tz = __builtin_ctzll(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             } else {
-                while (mi && a[i] < a[i - __builtin_ctz(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctz(mi));
+                while (mi) {
+                    int tz = __builtin_ctz(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             }
-			// add the rightmost element to the queue
+            // add the rightmost element to the queue
             mi ^= 1;
-            auto [val, idx] = a[i - __lg(mi)];
-			val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
-		}
-		// recursivly construct RMQ on blocks
-		s = SparseTableRMQ(b);
-	}
-	uint32_t get(int l, int r) {
-		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask[r];
+            int lz = __lg(mi);
+            auto [val, idx] = indexed_pair{A[i - lz], i - lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+        // recursivly construct RMQ on blocks
+        s = SparseTableRMQ(b);
+    }
+    uint32_t get(int l, int r) {
+        // if we are in the range of monotone queues, use them
+        auto [rval, ridx, rmask] = val_idx_mask[r];
         if (r - l + 1 < B) { 
             return r - __lg(rmask & ((mask_type(1) << (r - l + 1)) - 1));
-		}
+        }
         return 0;
         // auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
-		// // Take the min value to be min of right end 32-block and left end 32-block
+        // // Take the min value to be min of right end 32-block and left end 32-block
         // indexed_pair r_val_idx = indexed_pair{rval, ridx};
         // indexed_pair l_val_idx = indexed_pair{lval, lidx};
         // auto k = min(l_val_idx, r_val_idx);
-		// // compute block indicies to query recusively
-		// l = (l + B - 1) / B, r = r / B - 1;
-		// // only query if necessary
-		// if (l <= r) k = min(k, s.get(l, r));
-		// return k.second;
+        // // compute block indicies to query recusively
+        // l = (l + B - 1) / B, r = r / B - 1;
+        // // only query if necessary
+        // if (l <= r) k = min(k, s.get(l, r));
+        // return k.second;
     }
 };
 
@@ -606,52 +637,56 @@ struct RMQ_Alstrup_L {
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
     vector<val_idx_mask_t> val_idx_mask;
-	vector<indexed_pair> a;
-	RMQ_Alstrup_L(vector<T> A = {}) : a(sz(A)), val_idx_mask(sz(A)) {
-		rep(i, sz(a)) {
-            a[i] = indexed_pair{A[i], i};
-        }
+    RMQ_Alstrup_L(vector<T> A = {}) : val_idx_mask(sz(A)) {
         // preprocess block minimum values
-		vector<indexed_pair> b(sz(a) / B + 1);
-		// monotone queue
-		mask_type mi = 0;
-		rep(i, sz(a)) {
-			// calculate block minimum value
-			b[i / B] = (i % B ? min(b[i / B], a[i]) : a[i]);
-			// shift queue one left
-			mi <<= 1;
-			// need to pop all values larger then the current one
-			if constexpr (sizeof(mask_type) > 4) {
-                while (mi && a[i] < a[i - __builtin_ctzll(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctzll(mi));
+        vector<indexed_pair> b(sz(A) / B + 1);
+        // monotone queue
+        mask_type mi = 0;
+        rep(i, sz(A)) {
+            auto ai = indexed_pair{A[i], i};
+            // calculate block minimum value
+            b[i / B] = (i % B ? min(b[i / B], ai) : ai);
+            // shift queue one left
+            mi <<= 1;
+            // need to pop all values larger then the current one
+            if constexpr (sizeof(mask_type) > 4) {
+                while (mi) {
+                    int tz = __builtin_ctzll(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             } else {
-                while (mi && a[i] < a[i - __builtin_ctz(mi)])
-                    mi ^= (mask_type(1) << __builtin_ctz(mi));
+                while (mi) {
+                    int tz = __builtin_ctz(mi);
+                    if (ai < indexed_pair{A[i - tz], i - tz}) mi ^= (mask_type(1) << tz);
+                    else break;
+                }
             }
-			// add the rightmost element to the queue
+            // add the rightmost element to the queue
             mi ^= 1;
-            auto [val, idx] = a[i - __lg(mi)];
-			val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
-		}
-		// recursivly construct RMQ on blocks
-		s = SparseTableRMQ(b);
-	}
-	uint32_t get(int l, int r) {
-		// if we are in the range of monotone queues, use them
-		auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
+            int lz = __lg(mi);
+            auto [val, idx] = indexed_pair{A[i - lz], i - lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+        // recursivly construct RMQ on blocks
+        s = SparseTableRMQ(b);
+    }
+    uint32_t get(int l, int r) {
+        // if we are in the range of monotone queues, use them
+        auto [rval, ridx, rmask] = val_idx_mask_t{l, (l + r) / 2, 121};
         if (r - l + 1 < B) { 
             return 0;
-		}
+        }
         auto [lval, lidx, lmask] = val_idx_mask[l + B - 1];
-		// Take the min value to be min of right end 32-block and left end 32-block
+        // Take the min value to be min of right end 32-block and left end 32-block
         indexed_pair r_val_idx = indexed_pair{rval, ridx};
         indexed_pair l_val_idx = indexed_pair{lval, lidx};
         auto k = min(l_val_idx, r_val_idx);
-		// compute block indicies to query recusively
-		// l = (l + B - 1) / B, r = r / B - 1;
-		// only query if necessary
-		// if (l <= r) k = min(k, s.get(l, r));
-		return k.second;
+        // compute block indicies to query recusively
+        // l = (l + B - 1) / B, r = r / B - 1;
+        // only query if necessary
+        // if (l <= r) k = min(k, s.get(l, r));
+        return k.second;
     }
 };
 

@@ -555,19 +555,6 @@ int main(int argc, char *argv[]) {
         
     }
     else {
-        
-        {
-            string algo = "RMQ_SDSL_REC"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 0, 1024,128,0>> rmq(algo,&A,qv);
-        }
-
-
-        {
-            string algo = "RMQ_SDSL_REC_ST"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 2048, 1024,128,0>> rmq(algo,&A,qv);
-        }
-        
-        
         // {
         //     string algo = "RMQ_SDSL_SCT";
         //     RMQExperiment<rmq_succinct_sct<>> rmq(algo,&A,qv);
@@ -582,6 +569,16 @@ int main(int argc, char *argv[]) {
         //     string algo = "RMQ_SDSL_FAST_OPTIMIZED_ST_QUERY_ST";
         //     RMQExperiment<RMQ_SDSL_Fast_Optimized_ST_Query<2048, 32, 32, 0>> rmq(algo, &A, qv);
         // }
+
+        {
+            string algo = "RMQ_SDSL_REC"; 
+            RMQExperiment<rmq_succinct_rec_new<true, 0, 1024,128,0>> rmq(algo,&A,qv);
+        }
+
+        {
+            string algo = "RMQ_SDSL_REC_ST"; 
+            RMQExperiment<rmq_succinct_rec_new<true, 2048, 1024,128,0>> rmq(algo,&A,qv);
+        }
 
         {
             string algo = "RMQ_SDSL_FAST";
@@ -613,34 +610,40 @@ int main(int argc, char *argv[]) {
         //     executeRMQAlstrupDefault<uint64_t>(B,N,qv);
         // }
         {
-            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup, "Alstrup_LRS">(B,N,qv);
-            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_LR, "Alstrup_LR">(B,N,qv);
-            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_LS, "Alstrup_LS">(B,N,qv);
-            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_RS, "Alstrup_RS">(B,N,qv);
-            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_L, "Alstrup_L">(B,N,qv);
-            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_R, "Alstrup_R">(B,N,qv);
-            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_S, "Alstrup_S">(B,N,qv);
+            executeRMQAlstrupDefault<uint16_t, RMQ_Alstrup_Builtins_Cached, "Alstrup_16_cached">(B,N,qv);
+        }
+        {
+            executeRMQAlstrupDefault<uint16_t, RMQ_Alstrup, "Alstrup_16">(B,N,qv);
+            executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup, "Alstrup_32">(B,N,qv);
+            executeRMQAlstrupDefault<uint64_t, RMQ_Alstrup, "Alstrup_64">(B,N,qv);
+            // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup, "Alstrup_LRS">(B,N,qv);
+            // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_LR, "Alstrup_LR">(B,N,qv);
+            // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_LS, "Alstrup_LS">(B,N,qv);
+            // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_RS, "Alstrup_RS">(B,N,qv);
+            // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_L, "Alstrup_L">(B,N,qv);
+            // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_R, "Alstrup_R">(B,N,qv);
+            // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_S, "Alstrup_S">(B,N,qv);
         }
             
         // {
         //     executeRMQAlstrupModifiedSparseTable(B,N,qv);
         // }
         
-        if(N < std::numeric_limits<int>::max()) {
-            std::vector<long long> C(N);
-            for(size_t i = 0; i < N; ++i) {
-                C[i] = B[i];
-                if(C[i] != B[i]) return -1;
-            }
-            delete [] B;
+        // if(N < std::numeric_limits<int>::max()) {
+        //     std::vector<long long> C(N);
+        //     for(size_t i = 0; i < N; ++i) {
+        //         C[i] = B[i];
+        //         if(C[i] != B[i]) return -1;
+        //     }
+        //     delete [] B;
             
-            // {
-            //     executeRMQSuccinct(C,N,qv);
-            // }
-        }
-        else {
-            delete [] B;
-        }
+        //     // {
+        //     //     executeRMQSuccinct(C,N,qv);
+        //     // }
+        // }
+        // else {
+        //     delete [] B;
+        // }
     }
     
     
