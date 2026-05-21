@@ -275,6 +275,73 @@ void executeRMQAlstrupDefault(long int *A, size_t N, vector<vector<query>>& qry)
     
 }
 
+void executeRMQSparseTable(long int *A, size_t N, vector<vector<query>>& qry) {
+    // string algo = "RMQ_ALSTRUP"s + std::to_string(8 * sizeof(mask_type));
+    string algo = "SPARSE_TABLE";
+    vector<query_stats> q_stats(qry.size(),query_stats(algo));
+    construction_stats c_stats(algo);
+    cache_miss_stats cache_stats(N,algo);
+    
+
+    vector<std::pair<long int, size_t>> vA(N);
+    for (int i = 0; i < N; ++i) vA[i] = {A[i], i};
+    s = time();
+    SparseTableRMQ<std::pair<long int, size_t>> rmq(vA);
+    e = time();
+    
+    c_stats.addConstructionResult(N,milliseconds(),
+                                  8.0*(static_cast<double>(0)/static_cast<double>(N)));
+    c_stats.printConstructionStats();
+    
+    ofstream out("benchmark/"+algo+".txt");
+    for(int i = 0; i < qry.size(); ++i) {
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            volatile auto res = rmq.get(i1,i2).second;
+        }
+    }
+    
+    for(int i = 0; i < qry.size(); ++i) {
+        q_stats[i].N = N;
+        
+        if(count_cache_misses) {
+            bool success = hw_event.start(PERF_COUNT_HW_CACHE_MISSES); 
+            if(!success) {
+                perror("perf_event_open");
+                exit(-1);   
+            }
+        }
+        
+        for(int j = 0; j < qry[i].size(); ++j) {
+            ll i1 = qry[i][j].first, i2 = qry[i][j].second;
+            if(i1 > ULONG_MAX || i2 > ULONG_MAX) continue;
+            
+            s = time();
+            volatile auto res = rmq.get(i1,i2).second;
+            e = time();
+            
+            out << res << "\n";
+	       q_stats[i].addQueryResult(qry[i][j],microseconds());
+        }
+        
+        if(count_cache_misses) {
+            hw_event.stop();
+            size_t range = qry[i][0].second - qry[i][0].first + 1;
+            double cache_miss = static_cast<double>(hw_event.getCacheMisses())/qry[i].size();
+            double cache_ref = static_cast<double>(hw_event.getCacheReferences())/qry[i].size();
+            double miss_ratio = cache_miss/cache_ref;
+            cache_stats.addCacheMissResult(range,miss_ratio,cache_miss,cache_ref);
+        }
+        
+        q_stats[i].printQueryStats();
+    }
+    
+    if(count_cache_misses) {
+        cache_stats.printCacheMissStats();
+    }
+    
+}
+
 void executeRMQAlstrupModifiedSparseTable(long int *A, size_t N, vector<vector<query>>& qry) {
     string algo = "RMQ_ALSTRUP_MODIFIED_ST";
     vector<query_stats> q_stats(qry.size(),query_stats(algo));
@@ -570,10 +637,6 @@ int main(int argc, char *argv[]) {
         //     RMQExperiment<RMQ_SDSL_Fast_Optimized_ST_Query<2048, 32, 32, 0>> rmq(algo, &A, qv);
         // }
 
-        {
-            string algo = "RMQ_SDSL_REC"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 0, 1024,128,0>> rmq(algo,&A,qv);
-        }
 
         {
             string algo = "RMQ_SDSL_REC_ST"; 
@@ -581,14 +644,20 @@ int main(int argc, char *argv[]) {
         }
 
         {
-            string algo = "RMQ_SDSL_FAST";
-            RMQExperiment<RMQ_SDSL_Fast<0, 32, 32, 0>> rmq(algo, &A, qv);
+            string algo = "RMQ_SDSL_REC"; 
+            RMQExperiment<rmq_succinct_rec_new<true, 0, 1024,128,0>> rmq(algo,&A,qv);
         }
-        
+
         {
             string algo = "RMQ_SDSL_FAST_ST";
             RMQExperiment<RMQ_SDSL_Fast<2048, 32, 32, 0>> rmq(algo, &A, qv);
         }
+
+        {
+            string algo = "RMQ_SDSL_FAST";
+            RMQExperiment<RMQ_SDSL_Fast<0, 32, 32, 0>> rmq(algo, &A, qv);
+        }
+        
         
         long int *B = new long int[N];
         for(size_t i = 0; i < N; ++i) {
@@ -612,7 +681,10 @@ int main(int argc, char *argv[]) {
         {
             executeRMQAlstrupDefault<uint16_t, RMQ_Alstrup_Builtins_Cached, "Alstrup_16_cached">(B,N,qv);
         }
+
         {
+            executeRMQSparseTable(B,N,qv);
+            executeRMQAlstrupDefault<uint8_t, RMQ_Alstrup, "Alstrup_8">(B,N,qv);
             executeRMQAlstrupDefault<uint16_t, RMQ_Alstrup, "Alstrup_16">(B,N,qv);
             executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup, "Alstrup_32">(B,N,qv);
             executeRMQAlstrupDefault<uint64_t, RMQ_Alstrup, "Alstrup_64">(B,N,qv);
@@ -624,6 +696,7 @@ int main(int argc, char *argv[]) {
             // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_R, "Alstrup_R">(B,N,qv);
             // executeRMQAlstrupDefault<uint32_t, RMQ_Alstrup_S, "Alstrup_S">(B,N,qv);
         }
+
             
         // {
         //     executeRMQAlstrupModifiedSparseTable(B,N,qv);
