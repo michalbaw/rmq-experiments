@@ -68,6 +68,13 @@ construction_time_plot <- function(c, title="") {
       "RMQ_SDSL_BP_FAST_REC_1024"="SDSL-BP-REC"
     )
   )
+  algo_levels <- unique(c$Algo)
+
+  algo_levels <- algo_levels[
+    order(nchar(algo_levels), algo_levels)
+  ]
+
+  c$Algo <- factor(c$Algo, levels = algo_levels)
 
   # Aggregate statistics
   summary_df <- ddply(
@@ -136,9 +143,9 @@ construction_time_plot <- function(c, title="") {
 
 # Set your experiment directory path here
 experiment_dir <- "./results/"
-date <- "2026-05-15"
+date <- "2026-06-08"
 seq_type <- "random_walk"
-max_length <- "7"
+max_length <- "6"
 delta <- "0"
 # tmp <- cbind(date,"rmq_experiment",seq_type,max_length,delta,"with_cache_misses")
 tmp <- cbind(date,"rmq_experiment",seq_type,max_length,delta)

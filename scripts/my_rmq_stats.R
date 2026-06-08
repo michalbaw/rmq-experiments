@@ -1,10 +1,36 @@
 library(dplyr)
 library(ggplot2)
 
-data <- read.csv("results/2026-01-09_rmq_experiment_random_7_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_8_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_walk_8_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_increasing_8_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_8_0/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_walk_8_0/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_increasing_8_0/query_result.csv")
+
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_7_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_walk_7_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_increasing_7_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_7_0/query_result.csv")
+data <- read.csv("results/2026-06-08_rmq_experiment_random_walk_7_0/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_increasing_7_0/query_result.csv")
+
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_6_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_walk_6_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_increasing_6_0_with_cache_misses/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_6_0/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_random_walk_6_0/query_result.csv")
+# data <- read.csv("results/2026-06-08_rmq_experiment_increasing_6_0/query_result.csv")
 
 data <- data %>%
   mutate(RangeBin = 10^floor(log10(Range)))
+
+algo_levels <- unique(data$Algo)
+algo_levels <- algo_levels[
+  order(nchar(algo_levels), algo_levels)
+]
+
+data$Algo <- factor(data$Algo, levels = algo_levels)
 
 stats <- data %>%
   group_by(Algo, N, RangeBin) %>%
@@ -63,18 +89,47 @@ for (n_val in n_values) {
   
   plot_data <- stats %>%
     filter(N == n_val) %>%
-    filter(!Algo %in% c("RMQ_SDSL_SCT", "RMQ_SUCCINT", "RMQ_FAST", "RMQ_FERRADA"))
+    filter(!Algo %in% c(
+      "RMQ_SDSL_SCT", 
+      "RMQ_SUCCINCT", 
+      "RMQ_FERRADA", 
+      "RMQ_ALSTRUP_MODIFIED_ST",
+      "RMQ_SDSL_REC_ST",
+      "RMQ_SDSL_REC",
+      "RMQ_SDSL_FAST",
+      "RMQ_SDSL_FAST_ST",
+      "RMQ_ALSTRUP",
+      "RMQ_SDSL_FAST_OPTIMIZED_ST_QUERY_ST",
+      "Alstrup_7",
+      "Alstrup_8",
+      "Alstrup_10",
+      "Alstrup_12",
+      "Alstrup_14",
+      "Alstrup_16",
+      "Alstrup_20",
+      "Alstrup_24",
+      "Alstrup_28"
+      # "Alstrup_36",
+      # "Alstrup_40",
+      # "Alstrup_44",
+      # "Alstrup_48",
+      # "Alstrup_52",
+      # "Alstrup_56",
+      # "Alstrup_60",
+      # "Alstrup_64"
+    ))
+
 
   p <- ggplot(plot_data, aes(x = RangeBin, y = mean_time, color = Algo, group = Algo)) +
-  geom_ribbon(
-    aes(
-      ymin = q025,
-      ymax = q975,
-      fill = Algo
-    ),
-    alpha = 0.2,
-    color = NA
-  ) + 
+  # geom_ribbon(
+  #   aes(
+  #     ymin = q025,
+  #     ymax = q975,
+  #     fill = Algo
+  #   ),
+  #   alpha = 0.2,
+  #   color = NA
+  # ) + 
   geom_line(size = 1) +
   geom_point(size = 3) +
   geom_errorbar(
@@ -83,11 +138,12 @@ for (n_val in n_values) {
     alpha = 0.6
   ) +
   scale_x_log10(labels = scales::scientific) +
-  scale_y_continuous(limits = c(0, 1.25)) +
+  # scale_y_continuous(limits = c(0, 1.25)) +
+  scale_y_continuous(limits = c(0, 0.16)) +
   labs(
     title = bquote("RMQ Algorithm Performance (N =" ~ .(scales::scientific(n_val)) ~ ")"),
     x = "Range Bin [10^k, 10^(k+1))",
-    y = "Mean Time (seconds)",
+    y = "Mean Time (microseconds)",
     color = "Algorithm"
   ) +
   theme_minimal() +
