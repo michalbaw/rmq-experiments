@@ -201,9 +201,66 @@ struct SparseTableRMQ {
     }
 };
 
-template<class T, typename mask_type>
+template <class T, typename __, int __1>
+struct RMQ_Alstrup_right_to_left {
+    static constexpr int B = 32;
+    using mask_type = uint32_t;
+    using indexed_pair = pair<T, uint32_t>;
+    using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
+    SparseTableRMQ<indexed_pair> s;
+    vector<val_idx_mask_t> val_idx_mask;
+
+    RMQ_Alstrup_right_to_left(vector<T> A = {}): val_idx_mask(sz(A)) {
+        vector<indexed_pair> b(sz(A) / B + 1);
+        mask_type mi = 0;
+        for (int i = sz(A) - 1; i >= 0; i -= 1) {
+            auto ai = indexed_pair{A[i], i};
+            b[i / B] = ((i == sz(A) - 1 || i % B == B - 1) ? ai : min(b[i / B], ai));
+            mi <<= 1;
+
+            while (mi) {
+                int tz = __builtin_ctz(mi);
+                if (ai.first <= A[i + tz]) {
+                    mi ^= (1u << tz);
+                    continue;
+                }
+                break;
+            }
+
+            mi ^= 1;
+            int lz = __lg(mi);
+            auto [val, idx] = indexed_pair{A[i + lz], i + lz};
+            val_idx_mask[i] = val_idx_mask_t{val, idx, mi};
+        }
+
+        s = SparseTableRMQ(b);
+    }
+
+    uint32_t get(int l, int r) {
+        auto [lval, lidx, lmask] = val_idx_mask[l];
+        if (r - l + 1 < B) {
+            uint32_t masked = lmask & ((1u << (r - l + 1)) - 1);
+            return l + __lg(masked);
+        }
+        
+        auto [rval, ridx, rmask] = val_idx_mask[r - B + 1];
+
+        indexed_pair l_val_idx = indexed_pair{lval, lidx};
+        indexed_pair r_val_idx = indexed_pair{rval, ridx};
+        auto k = min(l_val_idx, r_val_idx);
+
+        l = (l + B - 1) / B;
+        r = r / B - 1;
+
+        if (l <= r) {
+            k = min(k, s.get(l, r));
+        }
+        return k.second;
+    }
+};
+
+template<class T, typename mask_type, int B>
 struct RMQ_Alstrup {
-    static constexpr int B = 8 * sizeof(mask_type); // not larger!
     using indexed_pair = pair<T, uint32_t>;
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
@@ -219,6 +276,7 @@ struct RMQ_Alstrup {
             b[i / B] = (i % B ? min(b[i / B], ai) : ai);
             // shift queue one left
             mi <<= 1;
+            mi &= ((mask_type(1) << B) - 1);
             // need to pop all values larger then the current one
             if constexpr (sizeof(mask_type) > 4) {
                 while (mi) {
@@ -261,9 +319,9 @@ struct RMQ_Alstrup {
     }
 };
 
-template<class T, typename mask_type>
+template<class T, typename mask_type, int B>
 struct RMQ_Alstrup_Builtins_Cached {
-    static constexpr int B = 8 * sizeof(mask_type); // not larger!
+    // static constexpr int B = 8 * sizeof(mask_type); // not larger!
     using indexed_pair = pair<T, uint32_t>;
     using val_idx_mask_t = tuple<T, uint32_t, mask_type>;
     SparseTableRMQ<indexed_pair> s; // sparse table
