@@ -269,7 +269,7 @@ int main(int argc, char *argv[]) {
     
     {
         string algo = "RMQ_SDSL_REC_NEW_1024_2"; 
-        RMQExperiment<rmq_succinct_rec_new<true, 1024,128,0>> rmq(algo,&prev,qv);
+        RMQExperiment<rmq_succinct_rec_new<true, false, 1024,128,0>> rmq(algo,&prev,qv);
     }
     
     

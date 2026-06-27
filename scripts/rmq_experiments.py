@@ -35,6 +35,8 @@ def create_sequence(n,a,b,f):
         seq_t = 2
     if seq_type == 'worst_case':
         seq_t = 3
+    if seq_type == 'random_walk':
+        seq_t = 4
     return exe(['./generators/gen_sequence.o',
          '-n', str(n),
          '-a', str(a),
@@ -106,6 +108,7 @@ def check_results():
 
 
 def delete_folder_content(experiment_dir):
+    pass
     for root, dirs, files in os.walk(experiment_dir, topdown=False):
         for name in files:
             os.remove(os.path.join(root, name))
@@ -199,11 +202,7 @@ def experiment(dirname):
     delete_folder_content("benchmark/")
 
 def setup_experiment_environment():
-    dirname = "results/"+str(datetime.datetime.now().date())+"_rmq_experiment_";
-    if(compare_sdsl): dirname += "sdsl_";
-    dirname += seq_type+"_"+str(max_length)+"_"+str(delta);
-    if(count_cache_misses): dirname += "_with_cache_misses";
-    dirname += "/";
+    dirname = "results/rmq_experiment/"
     try: os.stat(dirname);
     except: os.mkdir(dirname);
     delete_folder_content("benchmark/")

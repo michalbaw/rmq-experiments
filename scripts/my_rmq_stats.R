@@ -1,9 +1,7 @@
 library(dplyr)
 library(ggplot2)
 
-path_base <- "results/2025-12-17_rmq_experiment_random_8_0/"
-
-data <- read.csv(paste(path_base, "query_result.csv", sep=""))
+data <- read.csv("results/rmq_experiment/query_result.csv")
 
 stats <- data %>%
   group_by(Algo, N, Range) %>%
@@ -21,7 +19,7 @@ stats <- data %>%
     .groups = 'drop'
   )
 
-print(as.data.frame(stats), row.names = FALSE)
+# print(as.data.frame(stats), row.names = FALSE)
 
 write.csv(stats, "rmq_statistics.csv", row.names = FALSE)
 
@@ -29,7 +27,7 @@ cat("\n=== Summary by Algorithm ===\n")
 for (algo in unique(data$Algo)) {
   cat("\n", algo, ":\n", sep = "")
   algo_stats <- stats %>% filter(Algo == algo)
-  print(as.data.frame(algo_stats), row.names = FALSE)
+  # print(as.data.frame(algo_stats), row.names = FALSE)
 }
 
 overall_stats <- data %>%
@@ -43,7 +41,13 @@ overall_stats <- data %>%
   )
 
 cat("\n=== Overall Statistics by Algorithm ===\n")
-print(as.data.frame(overall_stats), row.names = FALSE)
+# print(as.data.frame(overall_stats), row.names = FALSE)
+
+cat("\n=== Average Times for N = 10^6, Range = 10^5 ===\n")
+specific_stats <- stats %>%
+  filter(N %in% c(1000000, 1e6), Range %in% c(100000, 1e5)) %>%
+  select(Algo, mean_time)
+print(as.data.frame(specific_stats), row.names = FALSE)
 
 cat("\n=== Generating Plots ===\n")
 n_values <- unique(stats$N)
@@ -55,23 +59,83 @@ for (n_val in n_values) {
 
   plot_data <- stats %>%
     filter(N == n_val) %>%
-    filter(!Algo %in% c("RMQ_SDSL_SCT", "RMQ_SUCCINT", "RMQ_FAST", "RMQ_FERRADA"))
+    filter(Algo %in% c(
+      # "RMQ_SDSL_SCT",
+      # "RMQ_SUCCINCT",
+      # "RMQ_FERRADA",
+      # "RMQ_SDSL_REC"
+      "RMQ_SDSL_FAST"
+      ,"RMQ_SDSL_REC_ST"
+      # ,"RMQ_SDSL_FAST_ST"
+      ,"RMQ_SDSL_SPARSE_BITMASKS"
+    ))
   
   p <- ggplot(plot_data, aes(x = Range, y = mean_time, color = Algo, group = Algo)) +
     geom_line(size = 1) +
     geom_point(size = 3) +
     scale_x_log10(labels = scales::scientific) +
-    scale_y_continuous() +
+    scale_y_continuous(limits = c(0, 0.35), expand = expansion(mult = c(0, 0.05))) +
+    # scale_y_continuous() + 
+    scale_color_manual(
+      values = c(
+        "RMQ_SDSL_SCT" = "#E69F00",
+        "RMQ_SUCCINCT" = "#56B4E9",
+        "RMQ_FERRADA" = "#009E73",
+        "RMQ_SDSL_REC" = "#F0E442",
+        "RMQ_SDSL_FAST" = "#0072B2",
+        "RMQ_SDSL_REC_ST" = "#D55E00",
+        "RMQ_SDSL_FAST_ST" = "#CC79A7",
+        "RMQ_SDSL_SPARSE_BITMASKS" = "#9600d5"
+      ),
+      breaks = c(
+        "RMQ_SDSL_SCT",
+        "RMQ_SUCCINCT",
+        "RMQ_FERRADA",
+        "RMQ_SDSL_REC",
+        "RMQ_SDSL_FAST",
+        "RMQ_SDSL_REC_ST",
+        "RMQ_SDSL_FAST_ST",
+        "RMQ_SDSL_SPARSE_BITMASKS"
+      ),
+      labels = c(
+        "RMQ_SDSL_FAST" = "Alstrup et al.",
+        "RMQ_SDSL_FAST_ST" = "Alstrup et al. + sparse table",
+        "RMQ_SDSL_REC" = "Baumstark et al.",
+        "RMQ_SDSL_REC_ST" = "Baumstark et al.",
+        "RMQ_SUCCINCT" = "Succinct (memory-optimal)",
+        "RMQ_FERRADA" = "Ferrada & Navarro",
+        "RMQ_SDSL_SCT" = "SDSL library",
+        "RMQ_SDSL_SPARSE_BITMASKS" = "Hybrid Baumstark + Alstrup"
+      )
+    ) +
     labs(
       title = bquote("RMQ Algorithm Performance (N =" ~ .(scales::scientific(n_val)) ~ ")"),
-      x = "Range (Query Range)",
-      y = "Mean Time (seconds)",
+      x = "Query Range",
+      y = "Mean Time (microseconds)",
       color = "Algorithm"
     ) +
-    theme_minimal() +
+    theme_minimal(base_size = 16) +
+    # theme(
+    #   plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    #   axis.title = element_text(size = 18),
+    #   axis.text = element_text(size = 14),
+    #   legend.title = element_text(size = 16),
+    #   legend.text = element_text(size = 14),
+    #   legend.position = "right"
+    # )
     theme(
-      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-      legend.position = "right"
+      plot.title = element_text(hjust = 0.5, size = 22, face = "bold"),
+      axis.title.x = element_text(size = 18,  margin = margin(t = 10)),
+      axis.title.y = element_text(size = 18, margin = margin(r = 10)),
+      
+      axis.text.x = element_text(size = 16),
+      axis.text.y = element_text(size = 16),
+      
+      legend.title = element_text(size = 20),
+      legend.text = element_text(size = 16),
+      legend.position = "right",
+      
+      legend.key.size = unit(1, "cm")
     )
 
   plot_list[[length(plot_list) + 1]] <- p
@@ -88,11 +152,9 @@ for (p in plot_list) {
   print(p)
 }
 dev.off()
-
-cat("\nIndividual plots saved as: rmq_plot_N_*.png\n")
 cat("All plots saved together in: rmq_all_plots.pdf\n")
 
-construct_data <- read.csv(paste(path_base, "construct_result.csv", sep=""))
+construct_data <- read.csv("results/rmq_experiment/construct_result.csv")
 
 cat("=== Construction Data Summary ===\n")
 print(summary(construct_data))

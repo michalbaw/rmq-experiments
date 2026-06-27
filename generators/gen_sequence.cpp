@@ -88,6 +88,17 @@ void writePseudoSortedIncreasingSequence(config& con, std::ofstream& os) {
     }
 }
 
+void writeRandomWalkSequence(config& con, std::ofstream& os, float pr_up = 0.51) {
+    printf("Starting generating Random Walk Sequence with A[i+1] = %f * (A[i] + 1) + (1 - %f) * (A[i] - 1)", pr_up, pr_up);
+    std::uniform_real_distribution<float> dis(0, 1);
+    auto value_now = con.N;
+    for (ll i = 0; i < con.N; ++i) {
+        if (dis(gen) <= pr_up) { value_now += 1;}
+        else value_now -= 1;
+        os << std::min(std::max(value_now, min_value), max_value) << (i+1 == con.N ? "\n" : " ");
+    }
+}
+
 void writePseudoSortedDecreasingSequence(config& con, std::ofstream& os) {
     printf("Starting generating pseudo decreasing sequence with A[i] in [%lld-i-%lld,%lld-i+%lld]\n",con.N,con.delta,con.N,con.delta);
     std::uniform_int_distribution<ll> dis(-con.delta, con.delta);
@@ -116,7 +127,7 @@ int main(int argc, char* const argv[]) {
     sequence::config con = sequence::parse_args(argc,argv);
     con.printConfig();
 	
-    printf("Generating random sequence...\n");
+    fprintf(stderr, "Generating random sequence with rule %d...\n", con.pseudo_sorted);
     std::ofstream os;
     os.open(con.ofile);
     os << con.N << " " << con.a << " " << con.b << "\n";
@@ -129,6 +140,7 @@ int main(int argc, char* const argv[]) {
                 break;
         case 3: sequence::writeWorstCaseSequence(con,os);
                 break;
+        case 4: sequence::writeRandomWalkSequence(con,os);
         default: break;
     }
     os.close();

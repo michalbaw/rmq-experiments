@@ -364,47 +364,47 @@ int main(int argc, char *argv[]) {
 
         {
             string algo = "RMQ_SDSL_REC_4096_1"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 4096,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 4096,0>> rmq(algo,&A,qv);
         }
         
         {
             string algo = "RMQ_SDSL_REC_2048_1"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 2048,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 2048,0>> rmq(algo,&A,qv);
         }
         
         {
             string algo = "RMQ_SDSL_REC_1024_1"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 1024,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 1024,0>> rmq(algo,&A,qv);
         }
         
         {
             string algo = "RMQ_SDSL_REC_4096_2"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 4096,128,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 4096,128,0>> rmq(algo,&A,qv);
         }
         
         {
             string algo = "RMQ_SDSL_REC_2048_2"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 2048,128,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 2048,128,0>> rmq(algo,&A,qv);
         }
         
         {
             string algo = "RMQ_SDSL_REC_1024_2"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 1024,128,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 1024,128,0>> rmq(algo,&A,qv);
         }
         
         {
             string algo = "RMQ_SDSL_REC_4096_3"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 4096,128,64,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 4096,128,64,0>> rmq(algo,&A,qv);
         }
         
         {
             string algo = "RMQ_SDSL_REC_2048_3"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 2048,128,64,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 2048,128,64,0>> rmq(algo,&A,qv);
         }
         
         {
             string algo = "RMQ_SDSL_REC_1024_3"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 1024,128,64,0>> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 1024,128,64,0>> rmq(algo,&A,qv);
         }
         
         {
@@ -417,13 +417,13 @@ int main(int argc, char *argv[]) {
         
         {
             string algo = "RMQ_SDSL_REC"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 0, 1024,128,0>,true> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 0, 1024,128,0>,true> rmq(algo,&A,qv);
         }
 
 
         {
             string algo = "RMQ_SDSL_REC_ST"; 
-            RMQExperiment<rmq_succinct_rec_new<true, 2048, 1024,128,0>,true> rmq(algo,&A,qv);
+            RMQExperiment<rmq_succinct_rec_new<true, false, 2048, 1024,128,0>,true> rmq(algo,&A,qv);
         }
         
         
@@ -442,6 +442,11 @@ int main(int argc, char *argv[]) {
             RMQExperiment<RMQ_SDSL_Fast<2048, 32, 32, 0>> rmq(algo, &A, qv);
         }
         
+        {
+            string algo = "RMQ_SDSL_SPARSE_BITMASKS";
+            RMQExperiment<rmq_succinct_rec_new<true, true, 0, 64, 32, 0>, true> rmq(algo, &A, qv);
+        }
+
         long int *B = new long int[N];
         for(size_t i = 0; i < N; ++i) {
             B[i] = A[i];

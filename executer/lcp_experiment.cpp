@@ -218,10 +218,10 @@ int main(int argc, char *argv[]) {
     
     
     {
-        rmq_succinct_rec_new<true,2048,1024,128,0> rmq(&lcp);
+        rmq_succinct_rec_new<true,false,2048,1024,128,0> rmq(&lcp);
         cout << "Start Suffix-Tree Traversion for RMQ " << algo2 << "..." << endl;
         s = time();
-        size_t num_queries = traverseSuffixTree<rmq_succinct_rec_new<true,2048,1024,128,0>>(rmq,lcp);
+        size_t num_queries = traverseSuffixTree<rmq_succinct_rec_new<true,false,2048,1024,128,0>>(rmq,lcp);
         e = time();
         //double percentage_avoided = (static_cast<double>(rmq.num_avoided_selects)/static_cast<double>(rmq.num_queries));
         //std::cout << rmq.num_avoided_selects << " out of " << rmq.num_queries << " queries (" << percentage_avoided << "%) avoids second select" << std::endl;

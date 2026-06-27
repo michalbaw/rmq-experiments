@@ -137,7 +137,8 @@ bpe_plot_for_sdsl_implementation <- function(c, title="", aes_plot = aes(factor(
   c$BPE <- as.numeric(as.character(c$BPE))
   c <- subset(c,c$Algo != "RMQ_SDSL_BP")
   c <- subset(c,c$Algo != "RMQ_SDSL_BP_FAST_REC_1024")
-  c$Algo  <- revalue(c$Algo, c("RMQ_SDSL_BP_FAST_REC_1024"="SDSL-BP-REC-1024","RMQ_SDSL_BP_FAST_REC_512"="SDSL-BP-REC-512","RMQ_SDSL_BP_FAST_1024"="SDSL-BP-1024","RMQ_SDSL_BP_FAST_4096"="SDSL-BP-REC-4096"))
+  c <- subset(c,c$Algo != "RMQ_SDSL_SPARSE_BITMASKS")
+  # c$Algo  <- revalue(c$Algo, c("RMQ_SDSL_BP_FAST_REC_1024"="SDSL-BP-REC-1024","RMQ_SDSL_BP_FAST_REC_512"="SDSL-BP-REC-512","RMQ_SDSL_BP_FAST_1024"="SDSL-BP-1024","RMQ_SDSL_BP_FAST_4096"="SDSL-BP-REC-4096"))
   
   plot <- ggplot(c,aes(factor(c$N),c$BPE,group=c$Algo,label=round(c$BPE,digits=3))) + ggtitle(title)
   plot <- plot + geom_line(aes(colour=Algo)) + geom_text(vjust=0, check_overlap=TRUE)

@@ -1,9 +1,10 @@
-path_base <- "results/2026-01-13_rmq_experiment_random_8_0/"
+path_base <- "results/2026-04-17_rmq_experiment_random_8_0/"
 
 data <- read.csv(paste(path_base, "query_result.csv", sep=""))
 
 filtered_data_rec <- data[data$Algo == "RMQ_SDSL_REC", ]
 filtered_data_rec_st <- data[data$Algo == "RMQ_SDSL_REC_ST", ]
+filtered_data_bitmasks <- data[data$Algo == "RMQ_SDSL_SPARSE_BITMASKS", ]
 
 library(tidyr)
 library(dplyr)
@@ -38,8 +39,22 @@ result_table_rec_st <- filtered_data_rec_st %>%
     values_from = Function_Mode
   )
 
+# RMQ_SDSL_SPARSE_BITMASKS
+result_table_bitmasks <- filtered_data_bitmasks %>%
+  group_by(Range, N) %>%
+  summarise(Function_Mode = get_mode_and_pct(Function), .groups = "drop") %>%
+  pivot_wider(
+    id_cols = Range,
+    names_from = N,
+    values_from = Function_Mode
+  )
+
 cat("\n=== RMQ_SDSL_REC ===\n")
 print(result_table_rec, width = Inf)
 
 cat("\n\n=== RMQ_SDSL_REC_ST ===\n")
 print(result_table_rec_st, width = Inf)
+
+
+cat("\n\n=== RMQ_SDSL_SPARSE_BITMASKS ===\n")
+print(result_table_bitmasks, width = Inf)
